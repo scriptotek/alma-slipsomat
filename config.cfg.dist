@@ -1,0 +1,7 @@
+[login]
+domain=
+username=
+password=
+
+[selenium]
+firefox_path=
