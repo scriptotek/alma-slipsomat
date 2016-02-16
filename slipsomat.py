@@ -399,6 +399,7 @@ def push():
 
             letter.push()
             sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+            sys.stdout.write('\n')
 
     driver.close()
 
