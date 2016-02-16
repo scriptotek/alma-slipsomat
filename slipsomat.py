@@ -215,8 +215,6 @@ class LetterTemplate(object):
 
     def edit(self):
 
-        print('Editing letter {}'.format(self.index))
-
         el = self.table.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) != 0 and not el.is_enabled():
             self.table.open()
@@ -226,15 +224,12 @@ class LetterTemplate(object):
 
             actionBtn = self.table.driver.find_elements_by_css_selector('#input_fileList_{}'.format(self.index))
             if len(actionBtn) != 0:
-                print('Click: action')
                 actionBtn[0].click()
 
             editBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index))
             if len(editBtn) != 0:
-                print('Click: edit')
                 editBtn[0].click()
             else:
-                print('Click: customize')
                 customizeBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_LI_fileList_{} input'.format(self.index))
                 customizeBtn[0].click()
 
@@ -328,12 +323,11 @@ class LetterTemplate(object):
             EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
         )
 
-        # Update local checksum
-        self.table.status.letters[self.filename]['checksum'] = get_sha1(content)
-
-        # Update modification date
+        # Update and save status.json
         modified = self.table.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
-        self.table.status.letters[self.filename]['remote_date'] = modified
+        self.checksum = get_sha1(content)
+        self.modified = modified
+        self.table.status.save()
 
         return True
 
@@ -397,9 +391,15 @@ def push():
             print('Aborting')
             return False
         for letter in modified:
-            letter.push()
+            sys.stdout.write('- {:60}'.format(
+                letter.filename.split('/')[-1]
+            ))
+            sys.stdout.flush()
+            old_chk = letter.checksum
 
-    table.status.save()
+            letter.push()
+            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+
     driver.close()
 
 
