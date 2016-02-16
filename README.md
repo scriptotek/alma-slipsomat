@@ -1,5 +1,5 @@
 
-This is a collection of the XSL files used to generate letters and slips in Alma, as customized by the University of Oslo Library. Included in this repo is also scripts for pulling and pushing the files to Alma using Selenium browser automation (since no API or other access method is available).
+This is a collection of the XSL files used to generate letters and slips in Alma, as customized by the University of Oslo Library. Included in this repo are also scripts for pulling and pushing the files to Alma using Selenium browser automation (since no API or other access method is available).
 
 ## Configuration
 
@@ -17,11 +17,25 @@ Dependencies:
 
 Install Python 2 or 3, then `pip install selenium colorama python-dateutil`
 
-## Running
+## Workflow
 
-- Run `python slipsomat.py pull` to fetch updated vesions of all XSLT files from Alma.
-- `python slipsomat.py push xsl/letters/FulReturnReceiptLetter.xsl` to push a single file. Work-in-progress, be careful.
+- `git pull` to pull in changes from other users.
 
+- Optional: `python slipsomat.py pull` will check if any files have been updated
+  directly in Alma (without using `slipsomat`), fetch those and update `status.json`.
+  Note: If you skip this step, `slipsomat` will still warn you if you try to push a
+  letter that have been modified remotely (checksums not matching), but then you will
+  have to merge manually.
+
+- After having made modifications to one or more letters, run `python slipsomat.py push`
+  to push the updates to Alma. Before making any changes, the script will print a list
+  of files and confirm that you want to upload these.
+
+- After having tested the modifications, do a `git commit` and `git push`
+
+## Todo
+
+- Add command for getting/pushing strings from the "Letter emails" page.
 
 
 ## Tips

@@ -33,29 +33,6 @@ def get_sha1(txt):
     return m.hexdigest()
 
 
-def load_status():
-    status = {
-        'letters': {}
-    }
-    if os.path.exists('status.json'):
-        with open('status.json') as f:
-            status = json.load(f)
-
-    # if status.get('last_pull_date') is not None:
-    #     status['last_pull_date'] = dateutil.parser.parse(status['last_pull_date'])
-
-    return status
-
-
-def write_status(status):
-
-    # if status.get('last_pull_date') is not None:
-    #     status['last_pull_date'] = status['last_pull_date'].isoformat()
-
-    with open('status.json', 'w') as f:
-        json.dump(status, f, sort_keys=True, indent=2)
-
-
 def login():
 
     config = ConfigParser.RawConfigParser()
@@ -106,213 +83,337 @@ def login():
     return driver
 
 
-def open_letters_table(driver):
+class LettersStatus(object):
 
-    # Open the General Configuration menu
-    # driver.get('https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=configuration_setup.configuration_mng.xml&pageViewMode=Edit&pageBean.menuKey=com.exlibris.dps.menu_general_conf_wizard&operation=LOAD&pageBean.helpId=general_configuration&pageBean.currentUrl=xmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&pageBean.navigationBackUrl=..%2Faction%2Fhome.do&resetPaginationContext=true&showBackButton=false')
-    # Click 'Customize Letters'
-    # element = driver.find_element_by_link_text('Customize Letters')
-    # element.click()
+    def __init__(self, table):
+        self.table = table
+        self.load()
 
-    # Open 'Customize Letters'
-    driver.get('https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse')
+    def load(self):
+        self.letters = {}
+        if os.path.exists('status.json'):
+            with open('status.json') as f:
+                data = json.load(f)
+                self.letters = data['letters']
 
-    # Wait for the table
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-    )
-
-    # Loop over all rows
-    elements = element.find_elements_by_css_selector('.jsRecordContainer')
-    letters = []
-    for n, el in enumerate(elements):
-        filename = element.find_element_by_id('HREF_INPUT_SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename'.format(n)).text.replace('../', '')
-        updateDate = element.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(n)).text
-        row = {
-            'filename': filename,
-            'modified': updateDate
-        }
-        letters.append(row)
-
-    return letters
+        # if self.data.get('last_pull_date') is not None:
+        #     self.data['last_pull_date'] = dateutil.parser.parse(self.data['last_pull_date'])
 
 
-def get_file_from_table(driver, n, row, status):
-    today = datetime.now().strftime('%d/%m/%Y')
+    def save(self):
 
-    if row['filename'] not in status['letters']:
-        status['letters'][row['filename']] = {}
+        letters = {}
+        for letter in self.table.rows:
+            letters[letter.filename] = {
+                'checksum': letter.checksum,
+                'modified': letter.modified
+            }
 
-    remote_date = status['letters'][row['filename']].get('remote_date')
+        # if self.letters.get('last_pull_date') is not None:
+        #     self.letters['last_pull_date'] = self.letters['last_pull_date'].isoformat()
 
-    if os.path.exists(row['filename']) and row['modified'] == remote_date and row['modified'] != today:
-        sys.stdout.write('no changes')
-        return False
+        with open('status.json', 'w') as f:
+            data = {'letters': letters}
+            json.dump(data, f, sort_keys=True, indent=2)
 
-    # driver.get('https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue')
 
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-    )
+class CodeTable(object):
+    """
+    Abstraction for 'Letter emails' (Code tables / tables.codeTables.codeTablesList.xml)
+    """
 
-    # Click Customize
-    links = [x for x in element.find_elements_by_css_selector('td a') if x.text.find('.xsl') != -1]
-    try:
-        links[n].click()
-    except IndexError:
-        return False  # We've reached the end of the list
+    def __init__(self, driver):
+        self.driver = driver
+        self.status = LettersStatus(self)
 
-    # Locate filename and content
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
-    )
-    filename = element.get_attribute('value').replace('../', '')
-    element = driver.find_element_by_id('pageBeanfileContent')
-    content = element.text
+        self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=tables.codeTables.codeTablesList.xml?operation=LOAD&pageBean.directFilter=LETTER&pageViewMode=Edit&resetPaginationContext=true'
 
-    element = driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
-    element.click()
-
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-    )
-
-    old_sha1 = status['letters'][row['filename']].get('checksum')
-    new_sha1 = get_sha1(content)
-
-    status['letters'][row['filename']]['checksum'] = new_sha1
-
-    if old_sha1 == new_sha1:
-        sys.stdout.write('no changes')
-        return False
-    else:
-        with open(filename, 'wb') as f:
-            f.write(content.encode('utf-8'))
-        sys.stdout.write('updated from {} to {}'.format(old_sha1[:8], new_sha1[:8]))
-        return True
+        self.open()
+        self.rows = self.parse_rows()
 
 
 
-def push_file_from_table(driver, n, filename, status):
+class TemplateTable(object):
+    """
+    Abstraction for 'Customize letters' (Configuration Files / configuration_setup.configuration_mng.xml)
+    """
 
-    content = open(filename, 'rb').read().decode('utf-8')
+    def __init__(self, driver):
+        self.driver = driver
+        self.status = LettersStatus(self)
 
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-    )
+        # self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=configuration.file_table.config_file_list.xml&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&resetPaginationContext=true'
+        self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue'
 
-    # Click Customize
-    btn = element.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_span input'.format(n))[0]
-    btn.click()
+        self.open()
+        self.rows = self.parse_rows()
 
-    # Wait
-    txtarea = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, 'pageBeanfileContent'))
-    )
+    def open(self):
+        # Open the General Configuration menu
+        # driver.get('https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=configuration_setup.configuration_mng.xml&pageViewMode=Edit&pageBean.menuKey=com.exlibris.dps.menu_general_conf_wizard&operation=LOAD&pageBean.helpId=general_configuration&pageBean.currentUrl=xmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&pageBean.navigationBackUrl=..%2Faction%2Fhome.do&resetPaginationContext=true&showBackButton=false')
+        # Click 'Customize Letters'
+        # element = driver.find_element_by_link_text('Customize Letters')
+        # element.click()
 
-    form_filename = driver.find_element_by_id('pageBeanconfigFilefilename').text.replace('../', '')
+        # Open 'Customize Letters'
+        self.driver.get(self.table_url)
 
-    # Verify filename
-    if filename != form_filename:
-        raise Exception('Filename did not match. {} != {}'.format(filename, form_filename))
+        # Wait for the table
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'TABLE_DATA_fileList'))
+        )
 
-    # Verify checksum
-    remote_chk = get_sha1(txtarea.text)
-    local_chk = status['letters'][filename]['checksum']
+    def parse_rows(self):
+        elems = self.driver.find_elements_by_css_selector('#TABLE_DATA_fileList .jsRecordContainer')
+        rows = []
+        sys.stdout.write('Reading table... ')
+        sys.stdout.flush()
+        for n, el in enumerate(elems):
+            sys.stdout.write('\rReading table... {}'.format(n))
+            sys.stdout.flush()
 
-    if local_chk != remote_chk:
-        print(Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
-        msg = 'Continue {}? '.format(row['filename'])
-        if raw_input("%s (y/N) " % msg).lower() != 'y':
-            print('Aborting')
+            filename = el.find_element_by_id('HREF_INPUT_SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename'.format(n)).text.replace('../', '')
+            modified = el.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(n)).text
+            if filename not in self.status.letters:
+                self.status.letters[filename] = {}
+            rows.append(LetterTemplate(table=self,
+                               index=n,
+                               filename=filename,
+                               modified=modified,
+                               checksum=self.status.letters[filename].get('checksum')
+                        ))
+            self.status.letters[filename]['remote_date'] = modified
+        sys.stdout.write('\rReading table... DONE\n')
+
+        return rows
+
+
+class LetterTemplate(object):
+
+    def __init__(self, table, index, filename, modified, checksum):
+        self.table = table
+
+        self.index = index
+        self.filename = filename
+        self.modified = modified
+        self.checksum = checksum
+
+    def view(self):
+
+        try:
+            self.table.driver.find_element_by_id('pageBeanfileContent')
+        except NoSuchElementException:
+            viewLink = self.table.driver.find_elements_by_css_selector('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index))[0]
+            viewLink.click()
+
+        # Locate filename and content
+        element = WebDriverWait(self.table.driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
+        )
+        filename = element.get_attribute('value').replace('../', '')
+        assert filename == self.filename, "%r != %r" % (filename, self.filename)
+
+    def edit(self):
+
+        print('Editing letter {}'.format(self.index))
+
+        el = self.table.driver.find_elements_by_css_selector('#pageBeanfileContent')
+        if len(el) != 0 and not el.is_enabled():
+            self.table.open()
+
+        el = self.table.driver.find_elements_by_css_selector('#pageBeanfileContent')
+        if len(el) == 0:
+
+            actionBtn = self.table.driver.find_elements_by_css_selector('#input_fileList_{}'.format(self.index))
+            if len(actionBtn) != 0:
+                print('Click: action')
+                actionBtn[0].click()
+
+            editBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index))
+            if len(editBtn) != 0:
+                print('Click: edit')
+                editBtn[0].click()
+            else:
+                print('Click: customize')
+                customizeBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_LI_fileList_{} input'.format(self.index))
+                customizeBtn[0].click()
+
+        element = WebDriverWait(self.table.driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
+        )
+        filename = element.get_attribute('value').replace('../', '')
+        assert filename == self.filename, "%r != %r" % (filename, self.filename)
+
+
+    def local_modified(self):
+        content = open(self.filename, 'rb').read().decode('utf-8')
+        current_chck = get_sha1(content)
+        stored_chk = self.table.status.letters[self.filename]['checksum']
+
+        return current_chck != stored_chk
+
+
+    def remote_modified(self):
+        q = self.table.driver.find_elements_by_id('TABLE_DATA_fileList')
+        if len(q) == 0:
+            self.table.open()
+
+        today = datetime.now().strftime('%d/%m/%Y')
+        cached_modified = self.table.status.letters[self.filename].get('modified')
+
+        # If modification date has not changed from the cached modification date,
+        # no modifications have occured. If the modification date is today, we cannot
+        # be sure, since there is no time information, just date.
+        if os.path.exists(self.filename) and self.modified == cached_modified and self.modified != today:
             return False
 
-    # Update
-    txtarea.clear()
-    txtarea.send_keys(content)
+        sys.stdout.write('checking... ')
 
-    btn = driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
-    # btn.click()
+        self.view()
 
-    status['letters'][filename]['checksum'] = get_sha1(content)
+        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        content = txtarea.text
 
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-    )
+        old_sha1 = self.checksum
+        new_sha1 = get_sha1(content)
 
-    # @TODO: Update status['letters'][filename]['remote_date']
+        return old_sha1 != new_sha1
 
-    return True
+    def pull(self):
+        self.view()
+
+        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        content = txtarea.text
+
+        with open(self.filename, 'wb') as f:
+            f.write(content.encode('utf-8'))
+
+        self.checksum = get_sha1(content)
+        self.table.open()
+
+
+    def push(self):
+
+        # Get new text
+        content = open(self.filename, 'rb').read().decode('utf-8')
+
+        # Open the edit form and locate the textarea
+        self.edit()
+        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+
+        # Verify text checksum against local checksum
+        remote_chk = get_sha1(txtarea.text)
+        local_chk = self.table.status.letters[self.filename]['checksum']
+        if local_chk != remote_chk:
+            print(Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
+            msg = 'Continue {}? '.format(self.filename)
+            if raw_input("%s (y/N) " % msg).lower() != 'y':
+                print('Aborting')
+                self.table.open()
+                return False
+
+        # Send new text to text area
+        txtarea.clear()
+        txtarea.send_keys(content)
+
+        # Submit the form
+        try:
+            btn = self.table.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
+        except NoSuchElementException:
+            btn = self.table.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
+        btn.click()
+
+        # Wait for the table view
+        element = WebDriverWait(self.table.driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
+        )
+
+        # Update local checksum
+        self.table.status.letters[self.filename]['checksum'] = get_sha1(content)
+
+        # Update modification date
+        modified = self.table.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
+        self.table.status.letters[self.filename]['remote_date'] = modified
+
+        return True
 
 
 def pull():
     fetched = 0
 
-    status = load_status()
-    print('Preparing Alma')
+    sys.stdout.write('Logging in... ')
+    sys.stdout.flush()
     driver = login()
-    rows = open_letters_table(driver)
+    sys.stdout.write('DONE\n')
+    table = TemplateTable(driver)
 
     print('Checking all letters for changes...')
-    for n, row in enumerate(rows):
+    for letter in table.rows:
 
         sys.stdout.write('- {:60}'.format(
-            row['filename'].split('/')[-1] + ' (' + row['modified'] + ')',
+            letter.filename.split('/')[-1] + ' (' + letter.modified + ')',
         ))
         sys.stdout.flush()
 
-        if get_file_from_table(driver, n, row, status):
+        if letter.remote_modified():
+            old_chk = letter.checksum
+            letter.pull()
+            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
             fetched += 1
+        else:
+            sys.stdout.write('no changes')
 
         sys.stdout.write('\n')
-        if row['filename'] not in status['letters']:
-            status['letters'][row['filename']] = {}
-        status['letters'][row['filename']]['remote_date'] = row['modified']
 
-    sys.stdout.write(Fore.GREEN + '{} of {} files contained new modifications\n'.format(fetched, len(rows)) + Style.RESET_ALL)
+    sys.stdout.write(Fore.GREEN + '{} of {} files contained new modifications\n'.format(fetched, len(table.rows)) + Style.RESET_ALL)
 
     # status['last_pull_date'] = datetime.now()
-    write_status(status)
+    table.status.save()
     driver.close()
 
 
-def push(filename):
-    # Upload files modified since last pull/push
-    status = load_status()
 
-    if not os.path.exists(filename):
-        print(Back.RED + Fore.WHITE + 'File does not exist locally' + Style.RESET_ALL)
-        sys.exit(0)
-
+def push():
+    sys.stdout.write('Logging in... ')
+    sys.stdout.flush()
     driver = login()
-    rows = open_letters_table(driver)
+    sys.stdout.write('DONE\n')
+    table = TemplateTable(driver)
 
-    m = -1
+    modified = []
+    for letter in table.rows:
+        if letter.local_modified():
+            modified.append(letter)
 
-    for n, row in enumerate(rows):
-        if row['filename'] == filename:
-            m = n
-            break
+    if len(modified) == 0:
+        sys.stdout.write(Fore.GREEN + 'No files contained local modifications.' + Style.RESET_ALL + '\n')
+    else:
+        sys.stdout.write(Fore.GREEN + 'The following {} file(s) contains local modifications.'.format(len(modified)) + Style.RESET_ALL + '\n')
+        for letter in modified:
+            print(' - {}'.format(letter.filename))
 
-    if m == -1:
-        print(Back.RED + Fore.WHITE + 'File does not exist in Alma' + Style.RESET_ALL)
-        sys.exit(0)
+        msg = 'Push updates to Alma? '
+        if raw_input("%s (y/N) " % msg).lower() != 'y':
+            print('Aborting')
+            return False
+        for letter in modified:
+            letter.push()
 
-    push_file_from_table(m, filename, status)
-
-    write_status(status)
+    table.status.save()
     driver.close()
 
-parser = argparse.ArgumentParser(description='Slipsomat.')
-parser.add_argument('command', metavar='push|pull', nargs=1,
-                   help='The command to run')
-parser.add_argument('filename', nargs='?',
-                   help='Filename to push')
 
-args = parser.parse_args()
-cmd = args.command[0]
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Slipsomat.')
+    parser.add_argument('command', metavar='push|pull', nargs=1,
+                       help='The command to run')
+    # parser.add_argument('filename', nargs='?',
+    #                    help='Filename to push')
 
-if cmd == 'pull':
-    pull()
-elif cmd == 'push':
-    push(args.filename)
+    args = parser.parse_args()
+    cmd = args.command[0]
+
+    if cmd == 'pull':
+        pull()
+    elif cmd == 'push':
+        push()
