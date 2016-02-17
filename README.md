@@ -15,7 +15,7 @@ Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
 
 Dependencies:
 
-Install Python 2 or 3, then `pip install selenium colorama python-dateutil`
+Install Python 2 (tested) or 3 (untested), then `pip install selenium colorama python-dateutil`
 
 ## Workflow
 
