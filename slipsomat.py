@@ -405,11 +405,16 @@ def push():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Slipsomat.')
-    parser.add_argument('command', metavar='push|pull', nargs=1,
-                       help='The command to run')
-    # parser.add_argument('filename', nargs='?',
-    #                    help='Filename to push')
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    # create the parser for the "pull" command
+    parser_a = subparsers.add_parser('pull', help='Pull in letters modified directly in Alma (letters whose remote checksum does not match the value in status.json).')
+    # parser_a.add_argument('bar', type=int, help='bar help')
+
+    # create the parser for the "push" command
+    parser_b = subparsers.add_parser('push', help='Push locally modified files (letters whose local checksum does not match the value in status.json) to Alma, and update status.json with new checksums.')
+    # parser_b.add_argument('--baz', choices='XYZ', help='baz help')
 
     args = parser.parse_args()
     cmd = args.command[0]
