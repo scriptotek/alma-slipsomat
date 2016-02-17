@@ -23,15 +23,21 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`
 
 - Optional: `python slipsomat.py pull` will check if any files have been updated
   directly in Alma (without using `slipsomat`), fetch those and update `status.json`.
+  Comparison is done by comparing the update date in Alma with the update date in `status.json`.
+  Alma does not provide time granularity for updates, only date, so for files that have been
+  modified today, the script will open the letter in Alma to get the text and calculate a
+  checksum to compare with the checksum in `status.json`.
   Note: If you skip this step, `slipsomat` will still warn you if you try to push a
   letter that have been modified remotely (checksums not matching), but then you will
   have to merge manually.
 
 - After having made modifications to one or more letters, run `python slipsomat.py push`
-  to push the updates to Alma. Before making any changes, the script will print a list
+  to push the updates to Alma. Comparison is done by comparing checksums of the local files
+  with the checksums in `status.json`. Before making any changes, the script will print a list
   of files and confirm that you want to upload these.
 
-- After having tested the modifications, do a `git commit` and `git push`
+- After having tested the modifications, do a `git commit` (remember to include the updated
+  `status.json`) and `git push`
 
 ## Todo
 
