@@ -406,7 +406,7 @@ def push():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='command')
 
     # create the parser for the "pull" command
     parser_a = subparsers.add_parser('pull', help='Pull in letters modified directly in Alma (letters whose remote checksum does not match the value in status.json).')
@@ -417,7 +417,7 @@ if __name__ == '__main__':
     # parser_b.add_argument('--baz', choices='XYZ', help='baz help')
 
     args = parser.parse_args()
-    cmd = args.command[0]
+    cmd = args.command
 
     if cmd == 'pull':
         pull()
