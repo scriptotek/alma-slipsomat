@@ -17,7 +17,10 @@ import getpass
 import hashlib
 import os.path
 import json
-import ConfigParser
+try:
+    import ConfigParser
+except Exception:
+    import configparser as ConfigParser #python 3
 from datetime import datetime
 import colorama
 from colorama import Fore, Back, Style
