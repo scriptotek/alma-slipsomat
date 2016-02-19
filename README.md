@@ -5,7 +5,7 @@ This is a collection of the XSL files used to generate letters and slips in Alma
 
 Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
 
-* `domain` is your Feide domain, e.g. `uio`
+* `domain` is your Feide domain, e.g. `uio.no`
 * `username` is your Feide username
 * `password` can be left blank if you want to be asked for it each time. This is the recommended solution,
   since it's not recommended to store your password in plain text.
