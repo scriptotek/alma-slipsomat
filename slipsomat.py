@@ -16,6 +16,7 @@ import sys
 import getpass
 import hashlib
 import os.path
+import platform
 import json
 try:
     import ConfigParser
@@ -54,6 +55,16 @@ def login():
 
     if password == '':
         password = getpass.getpass()
+        
+    if firefox_path == "":
+        if platform.system() == "Linux":
+            firefox_path = "firefox"
+        elif platform.system() == "Windows":
+            firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
+        elif platform.system() == "Darwin":
+            firefox_path = "/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin"
+        else:
+            raise Exception("No browser configured")
 
     binary = FirefoxBinary(firefox_path)
     driver = webdriver.Firefox(firefox_binary=binary)
