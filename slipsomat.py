@@ -39,13 +39,28 @@ def get_sha1(txt):
 
 def login():
 
-    config = ConfigParser.RawConfigParser()
+    if platform.system() == "Windows":
+        default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
+    elif platform.system() == "Darwin":
+        default_firefox_path = "/Applications/Firefox.app/Contents/MacOS/firefox-bin"
+    else:
+        default_firefox_path = "firefox"
+
+    defaults = {
+        'selenium': {
+            'browser': 'firefox',
+            'firefox_path': default_firefox_path
+        }
+    }
+
+    config = ConfigParser.RawConfigParser(defaults)
     config.read('config.cfg')
 
     domain = config.get('login', 'domain')
     username = config.get('login', 'username')
     password = config.get('login', 'password')
-    firefox_path = config.get('selenium', 'firefox_path')
+
+    browser = config.get('selenium', 'browser')
 
     if username == '':
         raise Exception('No username configured')
@@ -55,19 +70,15 @@ def login():
 
     if password == '':
         password = getpass.getpass()
-        
-    if firefox_path == "":
-        if platform.system() == "Linux":
-            firefox_path = "firefox"
-        elif platform.system() == "Windows":
-            firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
-        elif platform.system() == "Darwin":
-            firefox_path = "/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin"
-        else:
-            raise Exception("No browser configured")
 
-    binary = FirefoxBinary(firefox_path)
-    driver = webdriver.Firefox(firefox_binary=binary)
+    if browser == 'firefox':
+        browser_path = config.get('selenium', 'firefox_path')
+        if browser_path == '':
+            browser_path = defaults['selenium']['firefox_path']
+        binary = FirefoxBinary(browser_path)
+        driver = webdriver.Firefox(firefox_binary=binary)
+    else:
+        raise Exception('Unsupported/unknown browser')
 
     driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
 
