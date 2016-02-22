@@ -46,4 +46,8 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`
 
 ## Tips
 
-For Sublime Text users: Sublime Text does not highlight .xsl files by default. Click the current syntax type in the lower right corner of the window. This will open the syntax selection menu with the option to Open all with current extension as... at the top of the menu. Select XML.
+* Documentation: https://knowledge.exlibrisgroup.com/Alma/Product_Documentation/Alma_Online_Help_%28English%29/Administration/Configuring_General_Alma_Functions/Configuring_Alma_Letters
+
+* Footer: The link targets for "Contact us" and "My account" are set as `email_my_account` and `email_contact_us` in the General Customer Parameters mapping table (Administration > General Configuration > Configuration Menu > Other Settings). Despite the naming, these can be http URLs.
+
+* For Sublime Text users: Sublime Text does not highlight .xsl files by default. Click the current syntax type in the lower right corner of the window. This will open the syntax selection menu with the option to Open all with current extension as... at the top of the menu. Select XML.
