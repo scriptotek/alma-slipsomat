@@ -13,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import dateutil.parser
 import time
 import sys
+import re
 import getpass
 import hashlib
 import os.path
@@ -137,9 +138,17 @@ class LettersStatus(object):
         # if self.letters.get('last_pull_date') is not None:
         #     self.letters['last_pull_date'] = self.letters['last_pull_date'].isoformat()
 
-        with open('status.json', 'w') as f:
+        with open('status.json', 'wb') as f:
             data = {'letters': letters}
-            json.dump(data, f, sort_keys=True, indent=2)
+            jsondump = json.dumps(data, sort_keys=True, indent=2)
+
+            # Remove trailling spaces (https://bugs.python.org/issue16333)
+            jsondump = re.sub('\s+$', '', jsondump, flags=re.MULTILINE)
+
+            # Normalize to unix line endings
+            jsondump = jsondump.replace('\r\n','\n').replace('\r','\n')
+
+            f.write(jsondump.encode('utf-8'))
 
 
 class CodeTable(object):
