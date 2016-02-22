@@ -38,6 +38,11 @@ import argparse
 colorama.init()
 
 
+def normalize_line_endings(txt):
+    # Normalize to unix line endings
+    return txt.replace('\r\n','\n').replace('\r','\n')
+
+
 def get_sha1(txt):
     m = hashlib.sha1()
     m.update(txt.encode('utf-8'))
@@ -152,7 +157,7 @@ class LettersStatus(object):
             jsondump = re.sub('\s+$', '', jsondump, flags=re.MULTILINE)
 
             # Normalize to unix line endings
-            jsondump = jsondump.replace('\r\n','\n').replace('\r','\n')
+            jsondump = normalize_line_endings(jsondump)
 
             f.write(jsondump.encode('utf-8'))
 
@@ -281,7 +286,7 @@ class LetterTemplate(object):
 
 
     def local_modified(self):
-        content = open(self.filename, 'rb').read().decode('utf-8')
+        content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
         current_chck = get_sha1(content)
         stored_chk = self.table.status.letters[self.filename]['checksum']
 
@@ -307,7 +312,7 @@ class LetterTemplate(object):
         self.view()
 
         txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
-        content = txtarea.text
+        content = normalize_line_endings(txtarea.text)
 
         old_sha1 = self.checksum
         new_sha1 = get_sha1(content)
@@ -318,7 +323,7 @@ class LetterTemplate(object):
         self.view()
 
         txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
-        content = txtarea.text
+        content = normalize_line_endings(txtarea.text)
 
         with open(self.filename, 'wb') as f:
             f.write(content.encode('utf-8'))
@@ -330,14 +335,14 @@ class LetterTemplate(object):
     def push(self):
 
         # Get new text
-        content = open(self.filename, 'rb').read().decode('utf-8')
+        content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
 
         # Open the edit form and locate the textarea
         self.edit()
         txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
 
         # Verify text checksum against local checksum
-        remote_chk = get_sha1(txtarea.text)
+        remote_chk = get_sha1(normalize_line_endings(txtarea.text))
         local_chk = self.table.status.letters[self.filename]['checksum']
         if local_chk != remote_chk:
             print(Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
