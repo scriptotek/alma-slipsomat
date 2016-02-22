@@ -23,6 +23,12 @@ try:
     import ConfigParser
 except Exception:
     import configparser as ConfigParser #python 3
+
+try:
+    input = raw_input  # Python 2
+except NameError:
+    pass  # Python 3
+
 from datetime import datetime
 import colorama
 from colorama import Fore, Back, Style
@@ -336,7 +342,7 @@ class LetterTemplate(object):
         if local_chk != remote_chk:
             print(Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
             msg = 'Continue {}? '.format(self.filename)
-            if raw_input("%s (y/N) " % msg).lower() != 'y':
+            if input("%s (y/N) " % msg).lower() != 'y':
                 print('Aborting')
                 self.table.open()
                 return False
@@ -421,7 +427,7 @@ def push():
             print(' - {}'.format(letter.filename))
 
         msg = 'Push updates to Alma? '
-        if raw_input("%s (y/N) " % msg).lower() != 'y':
+        if input("%s (y/N) " % msg).lower() != 'y':
             print('Aborting')
             return False
         for letter in modified:
