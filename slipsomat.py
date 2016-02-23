@@ -19,6 +19,8 @@ import hashlib
 import os.path
 import platform
 import json
+from lxml import etree
+
 try:
     import ConfigParser
 except Exception:
@@ -335,7 +337,13 @@ class LetterTemplate(object):
     def push(self):
 
         # Get new text
-        content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
+        content = open(self.filename, 'rb').read()
+
+        # Validate XML: This will throw an lxml.etree.XMLSyntaxError on invalid XML
+        etree.fromstring(content)
+
+        # Normalize line endings and decode to Unicode string
+        content = normalize_line_endings(content.decode('utf-8'))
 
         # Open the edit form and locate the textarea
         self.edit()

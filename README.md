@@ -15,7 +15,7 @@ Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
 
 Dependencies:
 
-Install Python 2 or 3, then `pip install selenium colorama python-dateutil`
+Install Python 2 or 3, then `pip install selenium colorama python-dateutil lxml`. If `lxml` fails to install on Windows, try one of the binary distributions from http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml
 
 ## Workflow
 
