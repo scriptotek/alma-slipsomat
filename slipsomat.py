@@ -19,7 +19,7 @@ import hashlib
 import os.path
 import platform
 import json
-from lxml import etree
+from xml.etree import ElementTree
 
 try:
     import ConfigParser
@@ -339,8 +339,8 @@ class LetterTemplate(object):
         # Get new text
         content = open(self.filename, 'rb').read()
 
-        # Validate XML: This will throw an lxml.etree.XMLSyntaxError on invalid XML
-        etree.fromstring(content)
+        # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
+        ElementTree.fromstring(content)
 
         # Normalize line endings and decode to Unicode string
         content = normalize_line_endings(content.decode('utf-8'))
