@@ -77,6 +77,8 @@ fra meta-taggen `libnummer` i bunntekst (footer):
 }
 ```
 
+html2ps-oppsette driftes av USITs [gruppe for drift av meldingstjenester](http://www.usit.uio.no/om/organisasjon/it-drift/kd/gmt/index.html). For å gjøre endringer i konfigurasjonen sender vi epost til postmaster at rt.uio.no der vi beskriver endringene – det har gått greit så langt, de svarer raskt.
+
 Eksempel på en meta-tagg: `<meta name="libnummer" content="103 0310"/>`. 
 
 ## Tips
