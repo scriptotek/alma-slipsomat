@@ -43,6 +43,31 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 
 - Add command for getting/pushing strings from the "Letter emails" page.
 
+## Overview of the files
+
+Descriptions for the letters can be found in [Ex Libris Knowledge Base](http://knowledge.exlibrisgroup.com/Alma/Product_Documentation/Alma_Online_Help_%28English%29/Administration/Configuring_General_Alma_Functions/Configuring_Alma_Letters#Letter_Types).
+
+### Templates
+
+The files in `xsl/letters/call_template` contains templates that are used by the other files.
+We have mostly modified the existing ones, but have also added a few new. These are marked *(new)* below.
+
+* `footer.xsl`: Templates for footer elements:
+  * `lastFooter`: a closing greeting ("Questions? Contact us... Kind regards... etc.)
+  * `contactUs`: link to contact information
+  * `myAccount`: link to my account in Primo
+* `header.xsl`: Templates for style and introduction:
+  * `normalizedDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
+  * `head` : Organization logo, letter name (heading) and right-aligned date
+  * `headWithoutLogo` *(new)* : Letter name (heading) and right-aligned date
+* `mailReason.xsl`:
+  * `toWhomIsConcerned` : Defines the greeting ("Hi!" in our case) used in most emails.
+* `senderReceiver.xsl`:
+  * `senderReceiver` : The full name and address of the sender and receiver. Used in formal letters.
+* `recordTitle.xsl` / `smsRecordTitle.xsl`:
+  * `recordTitle` : Human-readable (not barcodes) short representation of a document/record (title + other metadata to identify the document), used when referring to a document/record in communication with users.
+* `style.xsl`: Various CSS
+
 ## Specific elements
 
 ### Libnummer (norsk ISIL-kode)
@@ -77,9 +102,10 @@ fra meta-taggen `libnummer` i bunntekst (footer):
 }
 ```
 
-html2ps-oppsette driftes av USITs [gruppe for drift av meldingstjenester](http://www.usit.uio.no/om/organisasjon/it-drift/kd/gmt/index.html). For å gjøre endringer i konfigurasjonen sender vi epost til postmaster at rt.uio.no der vi beskriver endringene – det har gått greit så langt, de svarer raskt.
+html2ps-oppsettet driftes av USITs [gruppe for drift av meldingstjenester](http://www.usit.uio.no/om/organisasjon/it-drift/kd/gmt/index.html). For å gjøre endringer i konfigurasjonen sender vi epost til postmaster at rt.uio.no der vi beskriver endringene – det har gått greit så langt, de svarer raskt.
 
-Eksempel på en meta-tagg: `<meta name="libnummer" content="103 0310"/>`. 
+Eksempel på en meta-tagg: `<meta name="libnummer" content="103 0310"/>`.
+
 
 ## Tips
 
