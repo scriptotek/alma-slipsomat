@@ -20,6 +20,7 @@ import os.path
 import platform
 import json
 from xml.etree import ElementTree
+import atexit
 
 try:
     import ConfigParser
@@ -52,7 +53,8 @@ def get_sha1(txt):
 
 
 def login():
-
+    print('Logging in... ')
+        
     if platform.system() == "Windows":
         default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
     elif platform.system() == "Darwin":
@@ -119,6 +121,7 @@ def login():
     except NoSuchElementException:
         raise Exception('Failed to login to Alma')
 
+    print("login DONE")
     return driver
 
 
@@ -385,13 +388,13 @@ class LetterTemplate(object):
         return True
 
 
-def pull():
+def pull(driver):
+    """
+    Pull changes from Alma
+    Params:
+        driver: selenium webdriver object
+    """
     fetched = 0
-
-    sys.stdout.write('Logging in... ')
-    sys.stdout.flush()
-    driver = login()
-    sys.stdout.write('DONE\n')
     table = TemplateTable(driver)
 
     print('Checking all letters for changes...')
@@ -416,15 +419,14 @@ def pull():
 
     # status['last_pull_date'] = datetime.now()
     table.status.save()
-    driver.close()
 
 
-
-def push():
-    sys.stdout.write('Logging in... ')
-    sys.stdout.flush()
-    driver = login()
-    sys.stdout.write('DONE\n')
+def push(driver):
+    """
+    Push changes to Alma
+    Params:
+        driver: selenium webdriver object
+    """
     table = TemplateTable(driver)
 
     modified = []
@@ -454,8 +456,24 @@ def push():
             sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
             sys.stdout.write('\n')
 
-    driver.close()
 
+def interactive(driver):
+    """
+    Start an interactive commandline session
+    Params:
+        driver: selenium webdriver object
+    """
+    while True:
+        command = input("slipsomat>").lower()
+        if command == "pull":
+            pull(driver)
+        elif command == "push":
+            push(driver)
+        elif command in ["exit", "quit"]:
+            print("exiting")
+            break
+        else:
+            print("Unknown command:", command)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -471,8 +489,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     cmd = args.command
-
-    if cmd == 'pull':
-        pull()
-    elif cmd == 'push':
-        push()
+    driver = login()
+    atexit.register(driver.close)
+    
+    try:
+        if cmd == 'pull':
+            pull(driver)
+        elif cmd == 'push':
+            push(driver)
+        else:
+            interactive(driver)
+    except Exception as e:
+        print(e)
