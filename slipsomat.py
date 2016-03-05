@@ -122,6 +122,7 @@ def login():
         raise Exception('Failed to login to Alma')
 
     print("login DONE")
+    atexit.register(driver.close)
     return driver
 
 
@@ -464,7 +465,7 @@ def interactive(driver):
         driver: selenium webdriver object
     """
     while True:
-        command = input("slipsomat>").lower()
+        command = input("slipsomat>").lower().strip()
         if command == "pull":
             pull(driver)
         elif command == "push":
@@ -490,14 +491,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     cmd = args.command
     driver = login()
-    atexit.register(driver.close)
     
-    try:
-        if cmd == 'pull':
-            pull(driver)
-        elif cmd == 'push':
-            push(driver)
-        else:
-            interactive(driver)
-    except Exception as e:
-        print(e)
+    if cmd == 'pull':
+        pull(driver)
+    elif cmd == 'push':
+        push(driver)
+    else:
+        interactive(driver)
