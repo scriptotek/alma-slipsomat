@@ -149,7 +149,8 @@ class LettersStatus(object):
         for letter in self.table.rows:
             letters[letter.filename] = {
                 'checksum': letter.checksum,
-                'modified': letter.modified
+                'default_checksum': letter.default_checksum,
+                'modified': letter.modified,
             }
 
         # if self.letters.get('last_pull_date') is not None:
@@ -231,7 +232,8 @@ class TemplateTable(object):
                                index=n,
                                filename=filename,
                                modified=modified,
-                               checksum=self.status.letters[filename].get('checksum')
+                               checksum=self.status.letters[filename].get('checksum'),
+                               default_checksum=self.status.letters[filename].get('default_checksum')
                         ))
             self.status.letters[filename]['remote_date'] = modified
         sys.stdout.write('\rReading table... DONE\n')
@@ -241,13 +243,14 @@ class TemplateTable(object):
 
 class LetterTemplate(object):
 
-    def __init__(self, table, index, filename, modified, checksum):
+    def __init__(self, table, index, filename, modified, checksum, default_checksum):
         self.table = table
 
         self.index = index
         self.filename = filename
         self.modified = modified
         self.checksum = checksum
+        self.default_checksum = default_checksum
 
     def view(self):
 
@@ -261,6 +264,30 @@ class LetterTemplate(object):
         element = WebDriverWait(self.table.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
+        filename = element.get_attribute('value').replace('../', '')
+        assert filename == self.filename, "%r != %r" % (filename, self.filename)
+
+    def is_customized(self):
+        try:
+            actionMenu = self.table.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
+            actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
+        except NoSuchElementException:
+            return False
+        return True
+
+    def view_default(self):
+        actionMenu = self.table.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
+        actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
+        if actionMenu:
+            actionMenu.click()
+            viewDefaultBtn = actionMenu.find_element_by_id('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
+            viewDefaultBtn.click()
+
+        # Locate filename and content
+        element = WebDriverWait(self.table.driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
+        )
+
         filename = element.get_attribute('value').replace('../', '')
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
 
@@ -337,6 +364,22 @@ class LetterTemplate(object):
         self.checksum = get_sha1(content)
         self.table.open()
 
+    def pull_default(self):
+        if self.is_customized():
+            self.view_default()
+        else:
+            self.view()
+
+        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        content = normalize_line_endings(txtarea.text)
+
+        with open('defaults/' + self.filename, 'wb') as f:
+            f.write(content.encode('utf-8'))
+
+        self.default_checksum = get_sha1(content)
+
+        # Go back
+        self.table.open()
 
     def push(self):
 
@@ -422,6 +465,39 @@ def pull(driver):
     table.status.save()
 
 
+def pull_defaults(driver):
+    """
+    Pull defaults from Alma
+    Params:
+        driver: selenium webdriver object
+    """
+    fetched = 0
+    table = TemplateTable(driver)
+
+    print('Checking all letters...')
+    for letter in table.rows:
+
+        sys.stdout.write('- {:60}'.format(
+            letter.filename.split('/')[-1],
+        ))
+        sys.stdout.flush()
+
+        old_chk = letter.default_checksum
+        letter.pull_default()
+        if letter.default_checksum != old_chk:
+            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7] if old_chk else '(none)', letter.default_checksum[0:7]))
+            fetched += 1
+        else:
+            sys.stdout.write('no changes')
+
+        sys.stdout.write('\n')
+
+    sys.stdout.write(Fore.GREEN + '{} of {} files contained new modifications\n'.format(fetched, len(table.rows)) + Style.RESET_ALL)
+
+    # status['last_pull_date'] = datetime.now()
+    table.status.save()
+
+
 def push(driver):
     """
     Push changes to Alma
@@ -468,6 +544,8 @@ def interactive(driver):
         command = input("slipsomat>").lower().strip()
         if command == "pull":
             pull(driver)
+        if command == "pull-defaults":
+            pull_defaults(driver)
         elif command == "push":
             push(driver)
         elif command in ["exit", "quit"]:
@@ -484,9 +562,13 @@ if __name__ == '__main__':
     parser_a = subparsers.add_parser('pull', help='Pull in letters modified directly in Alma (letters whose remote checksum does not match the value in status.json).')
     # parser_a.add_argument('bar', type=int, help='bar help')
 
+    # create the parser for the "pull-defaults" command
+    parser_b = subparsers.add_parser('pull-defaults', help='Pull in updates to default letters.')
+    # parser_b.add_argument('bar', type=int, help='bar help')
+
     # create the parser for the "push" command
-    parser_b = subparsers.add_parser('push', help='Push locally modified files (letters whose local checksum does not match the value in status.json) to Alma, and update status.json with new checksums.')
-    # parser_b.add_argument('--baz', choices='XYZ', help='baz help')
+    parser_c = subparsers.add_parser('push', help='Push locally modified files (letters whose local checksum does not match the value in status.json) to Alma, and update status.json with new checksums.')
+    # parser_c.add_argument('--baz', choices='XYZ', help='baz help')
 
     args = parser.parse_args()
     cmd = args.command
@@ -494,6 +576,8 @@ if __name__ == '__main__':
     
     if cmd == 'pull':
         pull(driver)
+    elif cmd == 'pull-defaults':
+        pull_defaults(driver)
     elif cmd == 'push':
         push(driver)
     else:

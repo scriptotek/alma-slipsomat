@@ -39,9 +39,16 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 - After having tested the modifications, do a `git commit` (remember to include the updated
   `status.json`) and `git push`
 
+
+### Updating default letters
+
+- Use `python slipsomat.py pull-defaults` to pull in all default letters. Note that the command
+  takes quite some time to run, since all letters have to be checked as Alma provides no
+  information whatsoever on when the default letters were last updated.
+
 ## Todo
 
-- Add command for getting/pushing strings from the "Letter emails" page.
+See [issues](https://github.com/scriptotek/alma-slipsomat/issues)
 
 ## Overview of the files
 
