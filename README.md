@@ -75,6 +75,18 @@ We have mostly modified the existing ones, but have also added a few new. These 
   * `recordTitle` : Human-readable (not barcodes) short representation of a document/record (title + other metadata to identify the document), used when referring to a document/record in communication with users.
 * `style.xsl`: Various CSS
 
+## Utskriftsløsning
+
+USIT har opprettet egne epost-adresser for for alle kønavnene for printerne det
+skal skrives til. Postmaster har konfigurert det slik at epost sendt til disse
+adressene sendes direkte til et enkelt Bash-script, som skriver HTML-teksten fra
+e-postene til disk og kaller html2ps for å konvertere fra HTML til PostScript,
+som så sendes til riktig printerkø basert på hvilke adresse e-posten ble sendt til.
+
+Fordeler med løsningen inkluderer at det går kjapt (utskriftene kommer "umiddelbart"
+når man trykker "Print slip") og at det er en enkel løsning å drifte. En ulempe med
+løsningen er at html2ps ikke støtter CSS, så vi kan bare gjøre enkel formatering.
+
 ## Specific elements
 
 ### Libnummer (norsk ISIL-kode)
