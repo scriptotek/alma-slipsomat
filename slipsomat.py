@@ -315,7 +315,11 @@ class LetterTemplate(object):
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
         filename = element.get_attribute('value').replace('../', '')
+        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
+        assert txtarea.is_enabled()
+        return txtarea
 
 
     def local_modified(self):
@@ -389,12 +393,15 @@ class LetterTemplate(object):
         # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
         ElementTree.fromstring(content)
 
+        if content.find('\t') != -1:
+            print('Cannot insert text containing tabs. Please replace tabs by spaces :)')
+            sys.exit(1)
+
         # Normalize line endings and decode to Unicode string
         content = normalize_line_endings(content.decode('utf-8'))
 
         # Open the edit form and locate the textarea
-        self.edit()
-        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.edit()
 
         # Verify text checksum against local checksum
         remote_chk = get_sha1(normalize_line_endings(txtarea.text))
