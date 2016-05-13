@@ -553,7 +553,7 @@ def interactive(driver):
         command = input("slipsomat>").lower().strip()
         if command == "pull":
             pull(driver)
-        if command == "pull-defaults":
+        elif command == "pull-defaults":
             pull_defaults(driver)
         elif command == "push":
             try:
