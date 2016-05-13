@@ -388,17 +388,17 @@ class LetterTemplate(object):
     def push(self):
 
         # Get new text
-        content = open(self.filename, 'rb').read()
+        content = open(self.filename, 'rb').read().decode('utf-8')
 
         # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
-        ElementTree.fromstring(content)
+        ElementTree.fromstring(content.encode('utf-8'))
 
-        if content.find('\t') != -1:
+        if '\t' in content:
             print('Cannot insert text containing tabs. Please replace tabs by spaces :)')
             sys.exit(1)
 
-        # Normalize line endings and decode to Unicode string
-        content = normalize_line_endings(content.decode('utf-8'))
+        # Normalize line endings
+        content = normalize_line_endings(content)
 
         # Open the edit form and locate the textarea
         txtarea = self.edit()
