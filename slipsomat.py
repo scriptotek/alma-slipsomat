@@ -441,7 +441,8 @@ class LetterTemplate(object):
 
 def pull(driver):
     """
-    Pull changes from Alma
+    Pull in letters modified directly in Alma,
+    letters whose remote checksum does not match the value in status.json
     Params:
         driver: selenium webdriver object
     """
@@ -507,7 +508,8 @@ def pull_defaults(driver):
 
 def push(driver):
     """
-    Push changes to Alma
+    Push locally modified files (letters whose local checksum does not match 
+    the value in status.json) to Alma, and update status.json with new checksums.
     Params:
         driver: selenium webdriver object
     """
@@ -558,6 +560,13 @@ def interactive(driver):
                 push(driver)
             except Exception as e:
                 print("Exception:", e)
+        elif command == "help":
+            print("""Commands:
+pull           Pull in letters modified directly in Alma
+pull-defaults  Pull in updates to default letters
+push           Push locally modified files
+exit           Exit the program
+""")
         elif command in ["exit", "quit"]:
             print("exiting")
             break
@@ -565,30 +574,5 @@ def interactive(driver):
             print("Unknown command:", command)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='command')
-
-    # create the parser for the "pull" command
-    parser_a = subparsers.add_parser('pull', help='Pull in letters modified directly in Alma (letters whose remote checksum does not match the value in status.json).')
-    # parser_a.add_argument('bar', type=int, help='bar help')
-
-    # create the parser for the "pull-defaults" command
-    parser_b = subparsers.add_parser('pull-defaults', help='Pull in updates to default letters.')
-    # parser_b.add_argument('bar', type=int, help='bar help')
-
-    # create the parser for the "push" command
-    parser_c = subparsers.add_parser('push', help='Push locally modified files (letters whose local checksum does not match the value in status.json) to Alma, and update status.json with new checksums.')
-    # parser_c.add_argument('--baz', choices='XYZ', help='baz help')
-
-    args = parser.parse_args()
-    cmd = args.command
     driver = login()
-    
-    if cmd == 'pull':
-        pull(driver)
-    elif cmd == 'pull-defaults':
-        pull_defaults(driver)
-    elif cmd == 'push':
-        push(driver)
-    else:
-        interactive(driver)
+    interactive(driver)

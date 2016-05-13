@@ -21,7 +21,9 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 
 - `git pull` to pull in changes from other users.
 
-- Optional: `python slipsomat.py pull` will check if any files have been updated
+- `python slipsomat.py` starts the slipsomat
+
+- Optional: the slipsomat command `pull` will check if any files have been updated
   directly in Alma (without using `slipsomat`), fetch those and update `status.json`.
   Comparison is done by comparing the update date in Alma with the update date in `status.json`.
   Alma does not provide time granularity for updates, only date, so for files that have been
@@ -31,7 +33,7 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
   letter that have been modified remotely (checksums not matching), but then you will
   have to merge manually.
 
-- After having made modifications to one or more letters, run `python slipsomat.py push`
+- After having made modifications to one or more letters, run the slipsomat command `push`
   to push the updates to Alma. Comparison is done by comparing checksums of the local files
   with the checksums in `status.json`. Before making any changes, the script will print a list
   of files and confirm that you want to upload these.
@@ -42,7 +44,7 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 
 ### Updating default letters
 
-- Use `python slipsomat.py pull-defaults` to pull in all default letters. Note that the command
+- Use the slipsomat command `pull-defaults` to pull in all default letters. Note that the command
   takes quite some time to run, since all letters have to be checked as Alma provides no
   information whatsoever on when the default letters were last updated.
 
