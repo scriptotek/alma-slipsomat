@@ -554,10 +554,7 @@ def interactive(driver):
         if command == "pull-defaults":
             pull_defaults(driver)
         elif command == "push":
-            try:
-                push(driver)
-            except Exception as e:
-                print("Exception:", e)
+            push(driver)
         elif command in ["exit", "quit"]:
             print("exiting")
             break
