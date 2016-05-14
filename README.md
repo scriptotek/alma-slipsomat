@@ -112,6 +112,7 @@ fra meta-taggen `libnummer` i bunntekst (footer):
     footer {
       left: "$[libnummer]";
       center: " ";  /* override default value */
+      right: "$[address]";
       font-size: 48pt;
     }
 }
