@@ -567,29 +567,36 @@ def interactive(driver):
         browser: Browser object
     """
     while True:
-        command = input("slipsomat>").lower().strip()
-        if command == "pull":
-            pull(browser.driver)
-        elif command == "pull-defaults":
-            pull_defaults(browser.driver)
-        elif command == "push":
-            try:
+        try:
+            command = input("slipsomat>").lower().strip()
+        except EOFError:
+            break  # control-D
+        
+        try:
+            if command == "pull":
+                pull(browser.driver)
+            elif command == "pull-defaults":
+                pull_defaults(browser.driver)
+            elif command == "push":
                 push(browser.driver)
-            except Exception as e:
-                print("Exception:", e)
-        elif command == "help":
-            print("""Commands:
+            elif command == "help":
+                print("""Commands:
 pull           Pull in letters modified directly in Alma
 pull-defaults  Pull in updates to default letters
 push           Push locally modified files
 exit           Exit the program
 """)
-        elif command in ["exit", "quit"]:
-            print("exiting")
-            break
-        else:
-            print("Unknown command:", command)
-
+            elif command in ["exit", "quit"]:
+                print("exiting")
+                break
+            else:
+                print("Unknown command:", command)
+                print("type 'help' for list of commands")
+        except Exception as e:
+            print("\nException:", e)
+            input("Press enter to restart browser:")
+            browser.restart()
+             
 if __name__ == '__main__':
     browser = Browser()
     interactive(browser)
