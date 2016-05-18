@@ -112,18 +112,12 @@ class Browser(object):
         browser_name = self.config.get('selenium', 'browser')
 
         if browser_name == 'firefox':
-            from selenium.webdriver import FirefoxProfile, Firefox
+            from selenium.webdriver import Firefox
 
             browser_path = self.config.get('selenium', 'firefox_path')
             browser_binary = FirefoxBinary(browser_path)
 
-            profile = FirefoxProfile()
-            # To avoid getting the "Unresponsive script" dialog when send_keys() uses
-            # more than 30 seconds, which it can do for some of the larger letters like
-            # FulReasourceRequestLetter
-            profile.set_preference('dom.max_chrome_script_run_time', 0)
-            profile.set_preference('dom.max_script_run_time', 0)
-            return Firefox(profile, firefox_binary=browser_binary)
+            return Firefox(firefox_binary=browser_binary)
 
         # @TODO: Add chrome
         raise RuntimeError('Unsupported/unknown browser')
@@ -423,6 +417,15 @@ class LetterTemplate(object):
         # Go back
         self.table.open()
 
+    def set_text(self, id, value):
+        """
+        The "normal" way to set the value of a textarea with Selenium is to use
+        send_keys(), but it took > 30 seconds for some of the larger letters.
+        So here's a much faster way:
+        """
+        value = value.replace('"', '\\"').replace('\n', '\\n')  # Did we forget to escape something? Probably
+        self.table.driver.execute_script('document.getElementById("' + id + '").value = "' + value + '";')
+
     def push(self):
 
         # Get new text
@@ -453,8 +456,7 @@ class LetterTemplate(object):
                 return False
 
         # Send new text to text area
-        txtarea.clear()
-        txtarea.send_keys(content)
+        self.set_text(txtarea.get_attribute('id'), content)
 
         # Submit the form
         try:
