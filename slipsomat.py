@@ -2,7 +2,6 @@
 from __future__ import print_function
 # from __future__ import unicode_strings
 
-from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.remote.errorhandler import NoSuchElementException
@@ -113,9 +112,18 @@ class Browser(object):
         browser_name = self.config.get('selenium', 'browser')
 
         if browser_name == 'firefox':
+            from selenium.webdriver import FirefoxProfile, Firefox
+
             browser_path = self.config.get('selenium', 'firefox_path')
             browser_binary = FirefoxBinary(browser_path)
-            return webdriver.Firefox(firefox_binary=browser_binary)
+
+            profile = FirefoxProfile()
+            # To avoid getting the "Unresponsive script" dialog when send_keys() uses
+            # more than 30 seconds, which it can do for some of the larger letters like
+            # FulReasourceRequestLetter
+            profile.set_preference('dom.max_chrome_script_run_time', 0)
+            profile.set_preference('dom.max_script_run_time', 0)
+            return Firefox(profile, firefox_binary=browser_binary)
 
         # @TODO: Add chrome
         raise RuntimeError('Unsupported/unknown browser')
