@@ -60,49 +60,49 @@ class Browser(object):
         self.login()
         self.connect()
         atexit.register(self.close)
-        
+
     def close(self):
         try:
             self.driver.close()
         except Exception as e:
             print("\nException closing driver:", e)
-            
-        
+
+
     def login(self):
         print('Logging in... ')
-            
+
         if platform.system() == "Windows":
             default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
         elif platform.system() == "Darwin":
             default_firefox_path = "/Applications/Firefox.app/Contents/MacOS/firefox-bin"
         else:
             default_firefox_path = "firefox"
-    
+
         defaults = {
             'selenium': {
                 'browser': 'firefox',
                 'firefox_path': default_firefox_path
             }
         }
-    
+
         config = ConfigParser.RawConfigParser(defaults)
         config.read('config.cfg')
-    
+
         self.domain = config.get('login', 'domain')
         self.username = config.get('login', 'username')
         self.password = config.get('login', 'password')
-    
+
         browser = config.get('selenium', 'browser')
-    
+
         if self.username == '':
             raise Exception('No username configured')
-    
+
         if self.domain == '':
             raise Exception('No domain configured')
-    
+
         if self.password == '':
             self.password = getpass.getpass()
-    
+
         if browser == 'firefox':
             browser_path = config.get('selenium', 'firefox_path')
             if browser_path == '':
@@ -110,8 +110,8 @@ class Browser(object):
             self.binary = FirefoxBinary(browser_path)
         else:
             raise Exception('Unsupported/unknown browser')
-        
-    
+
+
     def restart(self):
         self.close()
         self.connect()
@@ -119,33 +119,33 @@ class Browser(object):
     def connect(self):
         driver = webdriver.Firefox(firefox_binary=self.binary)
         driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
-    
+
         try:
             element = driver.find_element_by_id("org")
-    
+
             select = Select(element)
             select.select_by_value(self.domain)
             element.submit()
-    
+
             element = driver.find_element_by_id('username')
             element.send_keys(self.username)
-    
+
             element = driver.find_element_by_id('password')
             element.send_keys(self.password)
-    
+
             element.submit()
-    
+
         except NoSuchElementException:
             pass
-    
+
         try:
             driver.find_element_by_link_text('Tasks')
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
-    
+
         print("login DONE")
         self.driver = driver
-    
+
 
 class LettersStatus(object):
 
@@ -529,7 +529,7 @@ def pull_defaults(driver):
 
 def push(driver):
     """
-    Push locally modified files (letters whose local checksum does not match 
+    Push locally modified files (letters whose local checksum does not match
     the value in status.json) to Alma, and update status.json with new checksums.
     Params:
         driver: selenium webdriver object
@@ -575,7 +575,7 @@ def interactive(driver):
             command = input("slipsomat>").lower().strip()
         except EOFError:
             break  # control-D
-        
+
         try:
             if command == "pull":
                 pull(browser.driver)
@@ -600,7 +600,7 @@ exit           Exit the program
             print("\nException:", e)
             input("Press enter to restart browser:")
             browser.restart()
-             
+
 if __name__ == '__main__':
     browser = Browser()
     interactive(browser)
