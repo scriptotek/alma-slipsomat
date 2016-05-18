@@ -52,79 +52,96 @@ def get_sha1(txt):
     return m.hexdigest()
 
 
-def login():
-    print('Logging in... ')
+class Browser(object):
+    """
+    Selenium browser automation
+    """
+    def __init__(self):
+        self.login()
+        self.connect()
+        atexit.register(self.close)
         
-    if platform.system() == "Windows":
-        default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
-    elif platform.system() == "Darwin":
-        default_firefox_path = "/Applications/Firefox.app/Contents/MacOS/firefox-bin"
-    else:
-        default_firefox_path = "firefox"
-
-    defaults = {
-        'selenium': {
-            'browser': 'firefox',
-            'firefox_path': default_firefox_path
+    def close(self):
+        self.driver.close()
+        
+    def login(self):
+        print('Logging in... ')
+            
+        if platform.system() == "Windows":
+            default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
+        elif platform.system() == "Darwin":
+            default_firefox_path = "/Applications/Firefox.app/Contents/MacOS/firefox-bin"
+        else:
+            default_firefox_path = "firefox"
+    
+        defaults = {
+            'selenium': {
+                'browser': 'firefox',
+                'firefox_path': default_firefox_path
+            }
         }
-    }
+    
+        config = ConfigParser.RawConfigParser(defaults)
+        config.read('config.cfg')
+    
+        self.domain = config.get('login', 'domain')
+        self.username = config.get('login', 'username')
+        self.password = config.get('login', 'password')
+    
+        browser = config.get('selenium', 'browser')
+    
+        if self.username == '':
+            raise Exception('No username configured')
+    
+        if self.domain == '':
+            raise Exception('No domain configured')
+    
+        if self.password == '':
+            self.password = getpass.getpass()
+    
+        if browser == 'firefox':
+            browser_path = config.get('selenium', 'firefox_path')
+            if browser_path == '':
+                browser_path = defaults['selenium']['firefox_path']
+            self.binary = FirefoxBinary(browser_path)
+        else:
+            raise Exception('Unsupported/unknown browser')
+        
+    
+    def restart(self):
+        self.driver.close()
+        self.connect()
 
-    config = ConfigParser.RawConfigParser(defaults)
-    config.read('config.cfg')
-
-    domain = config.get('login', 'domain')
-    username = config.get('login', 'username')
-    password = config.get('login', 'password')
-
-    browser = config.get('selenium', 'browser')
-
-    if username == '':
-        raise Exception('No username configured')
-
-    if domain == '':
-        raise Exception('No domain configured')
-
-    if password == '':
-        password = getpass.getpass()
-
-    if browser == 'firefox':
-        browser_path = config.get('selenium', 'firefox_path')
-        if browser_path == '':
-            browser_path = defaults['selenium']['firefox_path']
-        binary = FirefoxBinary(browser_path)
-        driver = webdriver.Firefox(firefox_binary=binary)
-    else:
-        raise Exception('Unsupported/unknown browser')
-
-    driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
-
-    try:
-        element = driver.find_element_by_id("org")
-
-        select = Select(element)
-        select.select_by_value(domain)
-        element.submit()
-
-        element = driver.find_element_by_id('username')
-        element.send_keys(username)
-
-        element = driver.find_element_by_id('password')
-        element.send_keys(password)
-
-        element.submit()
-
-    except NoSuchElementException:
-        pass
-
-    try:
-        driver.find_element_by_link_text('Tasks')
-    except NoSuchElementException:
-        raise Exception('Failed to login to Alma')
-
-    print("login DONE")
-    atexit.register(driver.close)
-    return driver
-
+    def connect(self):
+        driver = webdriver.Firefox(firefox_binary=self.binary)
+        driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
+    
+        try:
+            element = driver.find_element_by_id("org")
+    
+            select = Select(element)
+            select.select_by_value(self.domain)
+            element.submit()
+    
+            element = driver.find_element_by_id('username')
+            element.send_keys(self.username)
+    
+            element = driver.find_element_by_id('password')
+            element.send_keys(self.password)
+    
+            element.submit()
+    
+        except NoSuchElementException:
+            pass
+    
+        try:
+            driver.find_element_by_link_text('Tasks')
+        except NoSuchElementException:
+            raise Exception('Failed to login to Alma')
+    
+        print("login DONE")
+        self.driver = driver
+    
 
 class LettersStatus(object):
 
@@ -547,17 +564,17 @@ def interactive(driver):
     """
     Start an interactive commandline session
     Params:
-        driver: selenium webdriver object
+        browser: Browser object
     """
     while True:
         command = input("slipsomat>").lower().strip()
         if command == "pull":
-            pull(driver)
+            pull(browser.driver)
         elif command == "pull-defaults":
-            pull_defaults(driver)
+            pull_defaults(browser.driver)
         elif command == "push":
             try:
-                push(driver)
+                push(browser.driver)
             except Exception as e:
                 print("Exception:", e)
         elif command == "help":
@@ -574,5 +591,5 @@ exit           Exit the program
             print("Unknown command:", command)
 
 if __name__ == '__main__':
-    driver = login()
-    interactive(driver)
+    browser = Browser()
+    interactive(browser)
