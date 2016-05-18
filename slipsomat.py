@@ -57,7 +57,7 @@ class Browser(object):
     Selenium browser automation
     """
     def __init__(self):
-        self.login()
+        self.read_config()
         self.connect()
         atexit.register(self.close)
 
@@ -67,10 +67,7 @@ class Browser(object):
         except Exception as e:
             print("\nException closing driver:", e)
 
-
-    def login(self):
-        print('Logging in... ')
-
+    def read_config(self):
         if platform.system() == "Windows":
             default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
         elif platform.system() == "Darwin":
@@ -111,12 +108,12 @@ class Browser(object):
         else:
             raise Exception('Unsupported/unknown browser')
 
-
     def restart(self):
         self.close()
         self.connect()
 
     def connect(self):
+        print('Logging in... ')
         driver = webdriver.Firefox(firefox_binary=self.binary)
         driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
 
