@@ -81,14 +81,7 @@ class Browser(object):
         else:
             default_firefox_path = 'firefox'
 
-        defaults = {
-            'selenium': {
-                'browser': 'firefox',
-                'firefox_path': default_firefox_path
-            }
-        }
-
-        config = ConfigParser.RawConfigParser(defaults)
+        config = ConfigParser.ConfigParser()
         config.read('config.cfg')
 
         if config.get('login', 'username') == '':
@@ -100,8 +93,17 @@ class Browser(object):
         if config.get('login', 'password') == '':
             config.set('login', 'password', getpass.getpass())
 
-        if config.get('selenium', 'browser') != 'firefox':
-            raise RuntimeError('Unsupported/unknown browser')
+        if not config.has_section('selenium'):
+            config.add_section('selenium')
+
+        if not config.has_section('selenium'):
+            config.add_section('selenium')
+
+        if not config.has_option('selenium', 'browser') or config.get('selenium', 'browser') == '':
+            config.set('selenium', 'browser', 'firefox')
+
+        if not config.has_option('selenium', 'firefox_path') or config.get('selenium', 'firefox_path') == '':
+            config.set('selenium', 'firefox_path', default_firefox_path)
 
         return config
 
