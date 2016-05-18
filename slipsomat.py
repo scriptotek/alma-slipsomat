@@ -62,7 +62,11 @@ class Browser(object):
         atexit.register(self.close)
         
     def close(self):
-        self.driver.close()
+        try:
+            self.driver.close()
+        except Exception as e:
+            print("\nException closing driver:", e)
+            
         
     def login(self):
         print('Logging in... ')
@@ -109,7 +113,7 @@ class Browser(object):
         
     
     def restart(self):
-        self.driver.close()
+        self.close()
         self.connect()
 
     def connect(self):
