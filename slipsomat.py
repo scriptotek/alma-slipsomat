@@ -119,6 +119,16 @@ class Browser(object):
 
             return Firefox(firefox_binary=browser_binary)
 
+        if browser_name == 'chrome':
+            from selenium.webdriver import Chrome
+
+            return Chrome()
+
+        if browser_name == 'phantomjs':
+            from selenium.webdriver import PhantomJS
+
+            return PhantomJS()
+
         # @TODO: Add chrome
         raise RuntimeError('Unsupported/unknown browser')
 

@@ -9,9 +9,14 @@ Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
 * `username` is your Feide username
 * `password` can be left blank if you want to be asked for it each time. This is the recommended solution,
   since it's not recommended to store your password in plain text.
+
+* `browser` can be set to `firefox`, `chrome` or `phantomjs`. Currently, `firefox`
+  is the driver we have tested the most. Both `chrome` and `phantomjs` requires
+  separate driver installs, while `firefox` can use your standard firefox installation.
 * `firefox_path` is the path to the Firefox binary (the path should not be quoted even if it contains spaces)
   * Example on Mac (Firefox installed through homebrew-cask): `/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin`
   * Example on Windows: `C:\Program Files (x86)\Mozilla Firefox\firefox.exe`
+
 
 Dependencies:
 
