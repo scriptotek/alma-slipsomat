@@ -57,7 +57,8 @@ class Browser(object):
     Selenium browser automation
     """
     def __init__(self):
-        self.read_config()
+        self.driver = None
+        self.config = self.read_config()
         self.connect()
         atexit.register(self.close)
 
@@ -67,13 +68,18 @@ class Browser(object):
         except Exception as e:
             print("\nException closing driver:", e)
 
-    def read_config(self):
-        if platform.system() == "Windows":
-            default_firefox_path = r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
-        elif platform.system() == "Darwin":
-            default_firefox_path = "/Applications/Firefox.app/Contents/MacOS/firefox-bin"
+    def restart(self):
+        self.close()
+        self.connect()
+
+    @staticmethod
+    def read_config():
+        if platform.system() == 'Windows':
+            default_firefox_path = r'C:\Program Files (x86)\Mozilla Firefox\firefox.exe'
+        elif platform.system() == 'Darwin':
+            default_firefox_path = '/Applications/Firefox.app/Contents/MacOS/firefox-bin'
         else:
-            default_firefox_path = "firefox"
+            default_firefox_path = 'firefox'
 
         defaults = {
             'selenium': {
@@ -85,50 +91,54 @@ class Browser(object):
         config = ConfigParser.RawConfigParser(defaults)
         config.read('config.cfg')
 
-        self.domain = config.get('login', 'domain')
-        self.username = config.get('login', 'username')
-        self.password = config.get('login', 'password')
+        if config.get('login', 'username') == '':
+            raise RuntimeError('No username configured')
 
-        browser = config.get('selenium', 'browser')
+        if config.get('login', 'domain') == '':
+            raise RuntimeError('No domain configured')
 
-        if self.username == '':
-            raise Exception('No username configured')
+        if config.get('login', 'password') == '':
+            config.set('login', 'password', getpass.getpass())
 
-        if self.domain == '':
-            raise Exception('No domain configured')
+        if config.get('selenium', 'browser') != 'firefox':
+            raise RuntimeError('Unsupported/unknown browser')
 
-        if self.password == '':
-            self.password = getpass.getpass()
+        return config
 
-        if browser == 'firefox':
-            browser_path = config.get('selenium', 'firefox_path')
-            if browser_path == '':
-                browser_path = defaults['selenium']['firefox_path']
-            self.binary = FirefoxBinary(browser_path)
-        else:
-            raise Exception('Unsupported/unknown browser')
+    def get_driver(self):
+        # Start a new browser and return the WebDriver
 
-    def restart(self):
-        self.close()
-        self.connect()
+        browser_name = self.config.get('selenium', 'browser')
+
+        if browser_name == 'firefox':
+            browser_path = self.config.get('selenium', 'firefox_path')
+            browser_binary = FirefoxBinary(browser_path)
+            return webdriver.Firefox(firefox_binary=browser_binary)
+
+        # @TODO: Add chrome
+        raise RuntimeError('Unsupported/unknown browser')
 
     def connect(self):
-        print('Logging in... ')
-        driver = webdriver.Firefox(firefox_binary=self.binary)
+        domain = self.config.get('login', 'domain')
+        username = self.config.get('login', 'username')
+        password = self.config.get('login', 'password')
+        driver = self.get_driver()
+
+        print('Logging in to {} as {}... '.format(domain, username))
         driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
 
         try:
             element = driver.find_element_by_id("org")
 
             select = Select(element)
-            select.select_by_value(self.domain)
+            select.select_by_value(domain)
             element.submit()
 
             element = driver.find_element_by_id('username')
-            element.send_keys(self.username)
+            element.send_keys(username)
 
             element = driver.find_element_by_id('password')
-            element.send_keys(self.password)
+            element.send_keys(password)
 
             element.submit()
 
