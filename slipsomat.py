@@ -448,10 +448,10 @@ class LetterTemplate(object):
         remote_chk = get_sha1(normalize_line_endings(txtarea.text))
         local_chk = self.table.status.letters[self.filename]['checksum']
         if local_chk != remote_chk:
-            print(Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
+            print('\n' + Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
             msg = 'Continue {}? '.format(self.filename)
             if input("%s (y/N) " % msg).lower() != 'y':
-                print('Aborting')
+                print('Skipping')
                 self.table.open()
                 return False
 
@@ -475,7 +475,6 @@ class LetterTemplate(object):
         self.checksum = get_sha1(content)
         self.modified = modified
         self.table.status.save()
-
         return True
 
 
@@ -578,9 +577,9 @@ def push(driver):
             sys.stdout.flush()
             old_chk = letter.checksum
 
-            letter.push()
-            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
-            sys.stdout.write('\n')
+            if letter.push():
+                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+                sys.stdout.write('\n')
 
 
 def interactive(driver):
