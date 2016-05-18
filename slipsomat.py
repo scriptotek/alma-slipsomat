@@ -444,10 +444,6 @@ class LetterTemplate(object):
         # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
         ElementTree.fromstring(content.encode('utf-8'))
 
-        if '\t' in content:
-            print('Cannot insert text containing tabs. Please replace tabs by spaces :)')
-            sys.exit(1)
-
         # Normalize line endings
         content = normalize_line_endings(content)
 
