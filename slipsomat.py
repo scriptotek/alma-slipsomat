@@ -640,6 +640,9 @@ class Shell(cmd.Cmd):
             input("Press enter to restart browser:")
             browser.restart()
 
+    def precmd(self, line):
+        "hook that is executed  when input is received"
+        return line.lower().strip()
 
 if __name__ == '__main__':
     browser = Browser()
