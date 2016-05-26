@@ -585,43 +585,56 @@ def push(driver):
                 sys.stdout.write('\n')
 
 
-def interactive(driver):
-    """
-    Start an interactive commandline session
-    Params:
-        browser: Browser object
-    """
-    while True:
-        try:
-            command = input("slipsomat>").lower().strip()
-        except EOFError:
-            break  # control-D
+import cmd
 
+
+class Shell(cmd.Cmd):
+    """
+    Interactive shell for parsing commands
+    """
+    intro = 'Welcome to the slipsomat. Type help or ? to list commands.\n'
+    prompt = "slipsomat> "
+    file = None
+
+    def __init__(self, browser):
+        """
+        Construct a new Shell object
+        Params:
+            browser: Browser object for command dispatch
+        """
+        super().__init__()
+        self.browser = browser
+
+    def do_exit(self, arg):
+        "Exit the program"
+        exit()
+
+    def do_quit(self, arg):
+        "Exit the program"
+        exit()
+
+    def do_pull(self, arg):
+        "Pull in letters modified directly in Alma"
+        self.execute(pull)
+
+    def do_defaults(self, arg):
+        "Pull in updates to default letters"
+        self.execute(pull_defaults)
+
+    def do_push(self, arg):
+        "Push locally modified files"
+        self.execute(push)
+
+    def execute(self, command):
+        "Executes  the command, and handle exceptions"
         try:
-            if command == "pull":
-                pull(browser.driver)
-            elif command == "pull-defaults":
-                pull_defaults(browser.driver)
-            elif command == "push":
-                push(browser.driver)
-            elif command == "help":
-                print("""Commands:
-pull           Pull in letters modified directly in Alma
-pull-defaults  Pull in updates to default letters
-push           Push locally modified files
-exit           Exit the program
-""")
-            elif command in ["exit", "quit"]:
-                print("exiting")
-                break
-            else:
-                print("Unknown command:", command)
-                print("type 'help' for list of commands")
+            command(self.browser.driver)
         except Exception as e:
             print("\nException:", e)
             input("Press enter to restart browser:")
             browser.restart()
 
+
 if __name__ == '__main__':
     browser = Browser()
-    interactive(browser)
+    Shell(browser).cmdloop()
