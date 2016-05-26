@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 from __future__ import print_function
 # from __future__ import unicode_strings
 
@@ -24,7 +24,7 @@ import atexit
 try:
     import ConfigParser
 except Exception:
-    import configparser as ConfigParser #python 3
+    import configparser as ConfigParser  # python 3
 
 try:
     input = raw_input  # Python 2
@@ -42,7 +42,7 @@ colorama.init()
 
 def normalize_line_endings(txt):
     # Normalize to unix line endings
-    return txt.replace('\r\n','\n').replace('\r','\n')
+    return txt.replace('\r\n', '\n').replace('\r', '\n')
 
 
 def get_sha1(txt):
@@ -55,6 +55,7 @@ class Browser(object):
     """
     Selenium browser automation
     """
+
     def __init__(self):
         self.driver = None
         self.config = self.read_config()
@@ -184,7 +185,6 @@ class LettersStatus(object):
         # if self.data.get('last_pull_date') is not None:
         #     self.data['last_pull_date'] = dateutil.parser.parse(self.data['last_pull_date'])
 
-
     def save(self):
 
         letters = {}
@@ -224,7 +224,6 @@ class CodeTable(object):
 
         self.open()
         self.rows = self.parse_rows()
-
 
 
 class TemplateTable(object):
@@ -271,12 +270,12 @@ class TemplateTable(object):
             if filename not in self.status.letters:
                 self.status.letters[filename] = {}
             rows.append(LetterTemplate(table=self,
-                               index=n,
-                               filename=filename,
-                               modified=modified,
-                               checksum=self.status.letters[filename].get('checksum'),
-                               default_checksum=self.status.letters[filename].get('default_checksum')
-                        ))
+                                       index=n,
+                                       filename=filename,
+                                       modified=modified,
+                                       checksum=self.status.letters[filename].get('checksum'),
+                                       default_checksum=self.status.letters[filename].get('default_checksum')
+                                       ))
             self.status.letters[filename]['remote_date'] = modified
         sys.stdout.write('\rReading table... DONE\n')
 
@@ -363,14 +362,12 @@ class LetterTemplate(object):
         assert txtarea.is_enabled()
         return txtarea
 
-
     def local_modified(self):
         content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
         current_chck = get_sha1(content)
         stored_chk = self.table.status.letters[self.filename]['checksum']
 
         return current_chck != stored_chk
-
 
     def remote_modified(self):
         q = self.table.driver.find_elements_by_id('TABLE_DATA_fileList')
