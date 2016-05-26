@@ -588,7 +588,7 @@ def push(driver):
 import cmd
 
 
-class Shell(cmd.Cmd):
+class Shell(cmd.Cmd, object):
     """
     Interactive shell for parsing commands
     """
@@ -602,7 +602,7 @@ class Shell(cmd.Cmd):
         Params:
             browser: Browser object for command dispatch
         """
-        super().__init__()
+        super(Shell, self).__init__()
         self.browser = browser
 
     def emptyline(self):
