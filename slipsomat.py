@@ -606,10 +606,12 @@ class Shell(cmd.Cmd):
         self.browser = browser
 
     def emptyline(self):
+        "handle empty lines"
         pass
 
-    def can_exit(self):
-        return True
+    def do_eof(self, arg):
+        "exit the program on eof/ctrl-d"
+        exit()
 
     def do_exit(self, arg):
         "Exit the program"
