@@ -2,3 +2,4 @@ config.cfg
 .project
 .pydevproject
 .settings/
+__pycache__

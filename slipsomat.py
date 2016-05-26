@@ -605,6 +605,12 @@ class Shell(cmd.Cmd):
         super().__init__()
         self.browser = browser
 
+    def emptyline(self):
+        pass
+
+    def can_exit(self):
+        return True
+
     def do_exit(self, arg):
         "Exit the program"
         exit()
@@ -637,4 +643,5 @@ class Shell(cmd.Cmd):
 
 if __name__ == '__main__':
     browser = Browser()
+#     browser = None
     Shell(browser).cmdloop()
