@@ -600,6 +600,12 @@ def test_XML(driver, filename):
         filename: string with the name of the XML file in test-data to use
     """
     print("Testing XML file:", filename)
+    driver.get(
+        "https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.configure_notification_template.xml&pageViewMode=Edit&RenewBean=true&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.configure_notification_template.xml%26pageViewMode%3DEdit%26RenewBean%3Dtrue%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue")
+    file_field = driver.find_element_by_id("pageBeannewFormFile")
+    file_field.send_keys("test-data/" + filename)
+    driver.find_element_by_id("cbuttonupload").submit()
+    driver.find_element_by_id("PAGE_BUTTONS_admconfigure_notification_templaterun_xsl_up").submit()
 
 
 import cmd
