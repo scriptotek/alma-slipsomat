@@ -56,11 +56,18 @@ class Browser(object):
     Selenium browser automation
     """
 
-    def __init__(self):
+    def __init__(self, options):
+        """
+        Construct a new Browser object
+        Params:
+            options: Namespace object
+        """
+        self.options = options
         self.driver = None
-        self.config = self.read_config()
-        self.connect()
-        atexit.register(self.close)
+        if not options.test:  # test mode without driver
+            self.config = self.read_config()
+            self.connect()
+            atexit.register(self.close)
 
     def close(self):
         try:
@@ -585,6 +592,16 @@ def push(driver):
                 sys.stdout.write('\n')
 
 
+def test_XML(driver, filename):
+    """
+    Run a "notification template" test in Alma. An XML file is uploaded and processed
+    Params:
+        driver: selenium webdriver object
+        filename: string with the name of the XML file in test-data to use
+    """
+    print("Testing XML file:", filename)
+
+
 import cmd
 
 
@@ -613,6 +630,10 @@ class Shell(cmd.Cmd, object):
         "exit the program on eof/ctrl-d"
         exit()
 
+    def do_EOF(self, arg):
+        "exit the program on eof/ctrl-d"
+        exit()
+
     def do_exit(self, arg):
         "Exit the program"
         exit()
@@ -633,20 +654,42 @@ class Shell(cmd.Cmd, object):
         "Push locally modified files"
         self.execute(push)
 
-    def execute(self, command):
-        "Executes  the command, and handle exceptions"
+    def do_test(self, arg):
+        "Run Alma 'notification template' test"
+        self.execute_args(test_XML, arg)
+
+    def complete_test(self, word, line, begin_idx, end_idx):
+        "Complete test arguments"
+        files = os.listdir("test-data")
+        return [file for file in files if file.startswith(word)]
+
+    def handle_exception(self, e):
+        print("\nException:", e)
+        input("Press enter to restart browser:")
+        browser.restart()
+
+    def execute(self, function):
+        "Executes the function, and handle exceptions"
         try:
-            command(self.browser.driver)
+            function(self.browser.driver)
         except Exception as e:
-            print("\nException:", e)
-            input("Press enter to restart browser:")
-            browser.restart()
+            self.handle_exception(e)
+
+    def execute_args(self, function, *args):
+        "Executes a function with arguments, and handle exceptions"
+        try:
+            function(self.browser.driver, *args)
+        except Exception as e:
+            self.handle_exception(e)
 
     def precmd(self, line):
         "hook that is executed  when input is received"
-        return line.lower().strip()
+        return line.strip()
 
 if __name__ == '__main__':
-    browser = Browser()
-#     browser = None
+    parser = argparse.ArgumentParser()
+#     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
+    parser.add_argument("-t", "--test", help="shell test, no browser", action="store_true")
+    options = parser.parse_args()
+    browser = Browser(options)
     Shell(browser).cmdloop()

@@ -46,6 +46,8 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 - After having tested the modifications, do a `git commit` (remember to include the updated
   `status.json`) and `git push`
 
+- The shell has a command history, and tab completion. For example
+  `test Ful<tab>`.
 
 ### Updating default letters
 
