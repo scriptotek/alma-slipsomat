@@ -632,12 +632,9 @@ class Shell(cmd.Cmd, object):
         "handle empty lines"
         pass
 
-    def do_EOF(self, arg):
-        "exit the program on eof/ctrl-d"
-        exit()
-
     def do_exit(self, arg):
         "Exit the program"
+        print("\nbye")
         exit()
 
     def do_pull(self, arg):
@@ -662,6 +659,7 @@ class Shell(cmd.Cmd, object):
         return [file for file in files if file.startswith(word)]
 
     # Aliases
+    do_EOF = do_exit  # ctrl-d
     do_eof = do_EOF
     do_quit = do_exit
 
