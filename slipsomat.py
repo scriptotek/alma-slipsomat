@@ -632,19 +632,11 @@ class Shell(cmd.Cmd, object):
         "handle empty lines"
         pass
 
-    def do_eof(self, arg):
-        "exit the program on eof/ctrl-d"
-        exit()
-
     def do_EOF(self, arg):
         "exit the program on eof/ctrl-d"
         exit()
 
     def do_exit(self, arg):
-        "Exit the program"
-        exit()
-
-    def do_quit(self, arg):
         "Exit the program"
         exit()
 
@@ -668,6 +660,10 @@ class Shell(cmd.Cmd, object):
         "Complete test arguments"
         files = os.listdir("test-data")
         return [file for file in files if file.startswith(word)]
+
+    # Aliases
+    do_eof = do_EOF
+    do_quit = do_exit
 
     def handle_exception(self, e):
         print("\nException:", e)

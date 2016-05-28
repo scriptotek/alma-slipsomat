@@ -47,11 +47,11 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
   `status.json`) and `git push`
 
 - The shell has a command history, and tab completion. For example
-  `test Ful<tab>`.
+  `test Ful<tab><tab>`.
 
 ### Updating default letters
 
-- Use the slipsomat command `pull-defaults` to pull in all default letters. Note that the command
+- Use the slipsomat command `defaults` to pull in all default letters. Note that the command
   takes quite some time to run, since all letters have to be checked as Alma provides no
   information whatsoever on when the default letters were last updated.
 
