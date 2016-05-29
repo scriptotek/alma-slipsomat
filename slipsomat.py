@@ -611,9 +611,9 @@ def test_XML(driver, filename):
     time.sleep(2)
     file_field = driver.find_element_by_id("pageBeannewFormFile")
     file_field.send_keys(path)
-    driver.find_element_by_id("cbuttonupload").submit()
+    driver.find_element_by_id("cbuttonupload").click()
     time.sleep(2)
-    driver.find_element_by_id("PAGE_BUTTONS_admconfigure_notification_templaterun_xsl_up").submit()
+    driver.find_element_by_id("PAGE_BUTTONS_admconfigure_notification_templaterun_xsl_up").click()
 
 
 import cmd
