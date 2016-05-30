@@ -76,8 +76,9 @@ class Browser(object):
             print("\nException closing driver:", e)
 
     def restart(self):
-        self.close()
-        self.connect()
+        if "config" in vars(self):  # check for test mode
+            self.close()
+            self.connect()
 
     @staticmethod
     def read_config():
@@ -658,7 +659,7 @@ class Shell(cmd.Cmd, object):
         self.execute(push)
 
     def do_test(self, arg):
-        "Run Alma 'notification template' test"
+        "test filename : Run Alma 'notification template' test, using given XML file"
         self.execute_args(test_XML, arg)
 
     def complete_test(self, word, line, begin_idx, end_idx):
