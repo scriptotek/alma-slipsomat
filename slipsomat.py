@@ -418,6 +418,9 @@ class LetterTemplate(object):
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
+        if not os.path.exists(os.path.dirname(self.filename)):
+            os.makedirs(os.path.dirname(self.filename))
+
         with open(self.filename, 'wb') as f:
             f.write(content.encode('utf-8'))
 
@@ -433,7 +436,12 @@ class LetterTemplate(object):
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
-        with open('defaults/' + self.filename, 'wb') as f:
+        filename = 'defaults/' + self.filename
+
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+
+        with open(filename, 'wb') as f:
             f.write(content.encode('utf-8'))
 
         self.default_checksum = get_sha1(content)
