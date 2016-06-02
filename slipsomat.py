@@ -527,7 +527,10 @@ def pull(browser):
         if letter.remote_modified():
             old_chk = letter.checksum
             letter.pull()
-            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+            if old_chk is None:
+                sys.stdout.write('fetched new letter @ {}'.format(letter.checksum[0:7]))
+            else:
+                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
             fetched += 1
         else:
             sys.stdout.write('no changes')
@@ -560,7 +563,10 @@ def pull_defaults(browser):
         old_chk = letter.default_checksum
         letter.pull_default()
         if letter.default_checksum != old_chk:
-            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7] if old_chk else '(none)', letter.default_checksum[0:7]))
+            if old_chk is None:
+                sys.stdout.write('fetched new letter @ {}'.format(letter.default_checksum[0:7]))
+            else:
+                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.default_checksum[0:7]))
             fetched += 1
         else:
             sys.stdout.write('no changes')
@@ -606,7 +612,10 @@ def push(browser):
             old_chk = letter.checksum
 
             if letter.push():
-                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+                if old_chk is None:
+                    sys.stdout.write('fetched new letter @ {}'.format(letter.checksum[0:7]))
+                else:
+                    sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
                 sys.stdout.write('\n')
 
 
