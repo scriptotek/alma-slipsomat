@@ -412,19 +412,44 @@ class LetterTemplate(object):
 
         return old_sha1 != new_sha1
 
+    def _can_continue(self, txt, msg):
+        # Compare text checksum with value in status.json
+        remote_chk = get_sha1(normalize_line_endings(txt))
+        if not 'checksum' in self.table.status.letters[self.filename]:
+            return True  # it's a new letter
+
+        local_chk = self.table.status.letters[self.filename]['checksum']
+        if remote_chk == local_chk:
+            return True
+
+        print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
+        # @TODO: Show diff here?
+        msg = 'Continue {}? '.format(self.filename)
+        return input("%s (y/N) " % msg).lower()[:1] == 'y'
+
     def pull(self):
         self.view()
-
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        content = normalize_line_endings(txtarea.text)
 
         if not os.path.exists(os.path.dirname(self.filename)):
             os.makedirs(os.path.dirname(self.filename))
 
-        with open(self.filename, 'wb') as f:
-            f.write(content.encode('utf-8'))
+        # Verify text checksum against local checksum
+        if os.path.isfile(self.filename):
+            with open(self.filename, 'rb') as f:
+                local_content = f.read().decode('utf-8')
 
-        self.checksum = get_sha1(content)
+            if not self._can_continue(local_content, 'Conflict: Trying to pull in a file modified remotely in Alma, but the local file also seems to have changes (checksum does not match the value in status.json). If you continue, the local changes will be overwritten. You might want to make a backup of the file first.'):
+                print('Skipping')
+                self.table.open()
+                return False
+
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
+        remote_content = normalize_line_endings(txtarea.text)
+
+        with open(self.filename, 'wb') as f:
+            f.write(remote_content.encode('utf-8'))
+
+        self.checksum = get_sha1(remote_content)
         self.table.open()
 
     def pull_default(self):
@@ -461,30 +486,25 @@ class LetterTemplate(object):
     def push(self):
 
         # Get new text
-        content = open(self.filename, 'rb').read().decode('utf-8')
+        local_content = open(self.filename, 'rb').read().decode('utf-8')
 
         # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
-        ElementTree.fromstring(content.encode('utf-8'))
+        ElementTree.fromstring(local_content.encode('utf-8'))
 
         # Normalize line endings
-        content = normalize_line_endings(content)
+        local_content = normalize_line_endings(local_content)
 
         # Open the edit form and locate the textarea
         txtarea = self.edit()
 
         # Verify text checksum against local checksum
-        remote_chk = get_sha1(normalize_line_endings(txtarea.text))
-        local_chk = self.table.status.letters[self.filename]['checksum']
-        if local_chk != remote_chk:
-            print('\n' + Back.RED + Fore.WHITE + 'Remote checksum does not match local. The remote file might have been modified by someone else.' + Style.RESET_ALL)
-            msg = 'Continue {}? '.format(self.filename)
-            if input("%s (y/N) " % msg).lower() != 'y':
-                print('Skipping')
-                self.table.open()
-                return False
+        if not self._can_continue(txtarea.text, 'The checksum of the remote file does not match the value in status.json. It might have been modified directly in Alma.'):
+            print('Skipping')
+            self.table.open()
+            return False
 
         # Send new text to text area
-        self.set_text(txtarea.get_attribute('id'), content)
+        self.set_text(txtarea.get_attribute('id'), local_content)
 
         # Submit the form
         try:
