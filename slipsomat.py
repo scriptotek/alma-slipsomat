@@ -664,7 +664,7 @@ class Shell(cmd.Cmd, object):
 
     def do_test(self, arg):
         "test filename : Run Alma 'notification template' test, using given XML file"
-        self.execute_args(test_XML, arg)
+        self.execute(test_XML, arg)
 
     def complete_test(self, word, line, begin_idx, end_idx):
         "Complete test arguments"
@@ -681,15 +681,8 @@ class Shell(cmd.Cmd, object):
         input("Press enter to restart browser:")
         browser.restart()
 
-    def execute(self, function):
+    def execute(self, function, *args):
         "Executes the function, and handle exceptions"
-        try:
-            function(self.browser)
-        except Exception as e:
-            self.handle_exception(e)
-
-    def execute_args(self, function, *args):
-        "Executes a function with arguments, and handle exceptions"
         try:
             function(self.browser, *args)
         except Exception as e:
