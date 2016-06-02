@@ -143,24 +143,26 @@ class Browser(object):
 
     def connect(self):
         domain = self.config.get('login', 'domain')
+        self.instance = self.config.get('login', 'instance')
+        auth_type = self.config.get('login', 'auth_type')
         username = self.config.get('login', 'username')
         password = self.config.get('login', 'password')
-        driver = self.get_driver()
+        self.driver = self.get_driver()
 
         print('Logging in to {} as {}... '.format(domain, username))
-        driver.get('https://bibsys-k.alma.exlibrisgroup.com/mng/login?auth=SAML')
+        self.get('/mng/login?auth={}'.format(auth_type))
 
         try:
-            element = driver.find_element_by_id("org")
+            element = self.driver.find_element_by_id("org")
 
             select = Select(element)
             select.select_by_value(domain)
             element.submit()
 
-            element = driver.find_element_by_id('username')
+            element = self.driver.find_element_by_id('username')
             element.send_keys(username)
 
-            element = driver.find_element_by_id('password')
+            element = self.driver.find_element_by_id('password')
             element.send_keys(password)
 
             element.submit()
@@ -169,12 +171,14 @@ class Browser(object):
             pass
 
         try:
-            driver.find_element_by_link_text('Tasks')
+            self.driver.find_element_by_link_text('Tasks')
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
         print("login DONE")
-        self.driver = driver
+
+    def get(self, url):
+        return self.driver.get('https://{}.alma.exlibrisgroup.com/{}'.format(self.instance, url.lstrip('/')))
 
 
 class LettersStatus(object):
@@ -224,11 +228,11 @@ class CodeTable(object):
     Abstraction for 'Letter emails' (Code tables / tables.codeTables.codeTablesList.xml)
     """
 
-    def __init__(self, driver):
-        self.driver = driver
+    def __init__(self, browser):
+        self.browser = browser
         self.status = LettersStatus(self)
 
-        self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=tables.codeTables.codeTablesList.xml?operation=LOAD&pageBean.directFilter=LETTER&pageViewMode=Edit&resetPaginationContext=true'
+        self.table_url = '/infra/action/pageAction.do?xmlFileName=tables.codeTables.codeTablesList.xml?operation=LOAD&pageBean.directFilter=LETTER&pageViewMode=Edit&resetPaginationContext=true'
 
         self.open()
         self.rows = self.parse_rows()
@@ -239,33 +243,33 @@ class TemplateTable(object):
     Abstraction for 'Customize letters' (Configuration Files / configuration_setup.configuration_mng.xml)
     """
 
-    def __init__(self, driver):
-        self.driver = driver
+    def __init__(self, browser):
+        self.browser = browser
         self.status = LettersStatus(self)
 
-        # self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=configuration.file_table.config_file_list.xml&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&resetPaginationContext=true'
-        self.table_url = 'https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue'
+        # self.table_url = '/infra/action/pageAction.do?xmlFileName=configuration.file_table.config_file_list.xml&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&resetPaginationContext=true'
+        self.table_url = '/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue'
 
         self.open()
         self.rows = self.parse_rows()
 
     def open(self):
         # Open the General Configuration menu
-        # driver.get('https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?xmlFileName=configuration_setup.configuration_mng.xml&pageViewMode=Edit&pageBean.menuKey=com.exlibris.dps.menu_general_conf_wizard&operation=LOAD&pageBean.helpId=general_configuration&pageBean.currentUrl=xmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&pageBean.navigationBackUrl=..%2Faction%2Fhome.do&resetPaginationContext=true&showBackButton=false')
+        # driver.get('/infra/action/pageAction.do?xmlFileName=configuration_setup.configuration_mng.xml&pageViewMode=Edit&pageBean.menuKey=com.exlibris.dps.menu_general_conf_wizard&operation=LOAD&pageBean.helpId=general_configuration&pageBean.currentUrl=xmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&pageBean.navigationBackUrl=..%2Faction%2Fhome.do&resetPaginationContext=true&showBackButton=false')
         # Click 'Customize Letters'
         # element = driver.find_element_by_link_text('Customize Letters')
         # element.click()
 
         # Open 'Customize Letters'
-        self.driver.get(self.table_url)
+        self.browser.get(self.table_url)
 
         # Wait for the table
-        WebDriverWait(self.driver, 10).until(
+        WebDriverWait(self.browser.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'TABLE_DATA_fileList'))
         )
 
     def parse_rows(self):
-        elems = self.driver.find_elements_by_css_selector('#TABLE_DATA_fileList .jsRecordContainer')
+        elems = self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList .jsRecordContainer')
         rows = []
         sys.stdout.write('Reading table... ')
         sys.stdout.flush()
@@ -304,13 +308,13 @@ class LetterTemplate(object):
     def view(self):
 
         try:
-            self.table.driver.find_element_by_id('pageBeanfileContent')
+            self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         except NoSuchElementException:
-            viewLink = self.table.driver.find_elements_by_css_selector('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index))[0]
+            viewLink = self.table.browser.driver.find_elements_by_css_selector('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index))[0]
             viewLink.click()
 
         # Locate filename and content
-        element = WebDriverWait(self.table.driver, 10).until(
+        element = WebDriverWait(self.table.browser.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
         filename = element.get_attribute('value').replace('../', '')
@@ -318,14 +322,14 @@ class LetterTemplate(object):
 
     def is_customized(self):
         try:
-            actionMenu = self.table.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
+            actionMenu = self.table.browser.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
             actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
         except NoSuchElementException:
             return False
         return True
 
     def view_default(self):
-        actionMenu = self.table.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
+        actionMenu = self.table.browser.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
         actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
         if actionMenu:
             actionMenu.click()
@@ -333,7 +337,7 @@ class LetterTemplate(object):
             viewDefaultBtn.click()
 
         # Locate filename and content
-        element = WebDriverWait(self.table.driver, 10).until(
+        element = WebDriverWait(self.table.browser.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
 
@@ -342,29 +346,29 @@ class LetterTemplate(object):
 
     def edit(self):
 
-        el = self.table.driver.find_elements_by_css_selector('#pageBeanfileContent')
+        el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) != 0 and not el.is_enabled():
             self.table.open()
 
-        el = self.table.driver.find_elements_by_css_selector('#pageBeanfileContent')
+        el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) == 0:
 
-            actionBtn = self.table.driver.find_elements_by_css_selector('#input_fileList_{}'.format(self.index))
+            actionBtn = self.table.browser.driver.find_elements_by_css_selector('#input_fileList_{}'.format(self.index))
             if len(actionBtn) != 0:
                 actionBtn[0].click()
 
-            editBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index))
+            editBtn = self.table.browser.driver.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index))
             if len(editBtn) != 0:
                 editBtn[0].click()
             else:
-                customizeBtn = self.table.driver.find_elements_by_css_selector('#ROW_ACTION_LI_fileList_{} input'.format(self.index))
+                customizeBtn = self.table.browser.driver.find_elements_by_css_selector('#ROW_ACTION_LI_fileList_{} input'.format(self.index))
                 customizeBtn[0].click()
 
-        element = WebDriverWait(self.table.driver, 10).until(
+        element = WebDriverWait(self.table.browser.driver, 10).until(
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
         filename = element.get_attribute('value').replace('../', '')
-        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
 
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
         assert txtarea.is_enabled()
@@ -378,7 +382,7 @@ class LetterTemplate(object):
         return current_chck != stored_chk
 
     def remote_modified(self):
-        q = self.table.driver.find_elements_by_id('TABLE_DATA_fileList')
+        q = self.table.browser.driver.find_elements_by_id('TABLE_DATA_fileList')
         if len(q) == 0:
             self.table.open()
 
@@ -395,7 +399,7 @@ class LetterTemplate(object):
 
         self.view()
 
-        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
         old_sha1 = self.checksum
@@ -406,7 +410,7 @@ class LetterTemplate(object):
     def pull(self):
         self.view()
 
-        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
         with open(self.filename, 'wb') as f:
@@ -421,7 +425,7 @@ class LetterTemplate(object):
         else:
             self.view()
 
-        txtarea = self.table.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
         with open('defaults/' + self.filename, 'wb') as f:
@@ -439,7 +443,7 @@ class LetterTemplate(object):
         So here's a much faster way:
         """
         value = value.replace('"', '\\"').replace('\n', '\\n')  # Did we forget to escape something? Probably
-        self.table.driver.execute_script('document.getElementById("' + id + '").value = "' + value + '";')
+        self.table.browser.driver.execute_script('document.getElementById("' + id + '").value = "' + value + '";')
 
     def push(self):
 
@@ -471,33 +475,33 @@ class LetterTemplate(object):
 
         # Submit the form
         try:
-            btn = self.table.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
+            btn = self.table.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
         except NoSuchElementException:
-            btn = self.table.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
+            btn = self.table.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
         btn.click()
 
         # Wait for the table view
-        element = WebDriverWait(self.table.driver, 10).until(
+        element = WebDriverWait(self.table.browser.driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
         )
 
         # Update and save status.json
-        modified = self.table.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
+        modified = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
         self.checksum = get_sha1(content)
         self.modified = modified
         self.table.status.save()
         return True
 
 
-def pull(driver):
+def pull(browser):
     """
     Pull in letters modified directly in Alma,
     letters whose remote checksum does not match the value in status.json
     Params:
-        driver: selenium webdriver object
+        browser: Browser object
     """
     fetched = 0
-    table = TemplateTable(driver)
+    table = TemplateTable(browser)
 
     print('Checking all letters for changes...')
     for letter in table.rows:
@@ -523,14 +527,14 @@ def pull(driver):
     table.status.save()
 
 
-def pull_defaults(driver):
+def pull_defaults(browser):
     """
     Pull defaults from Alma
     Params:
-        driver: selenium webdriver object
+        browser: Browser object
     """
     fetched = 0
-    table = TemplateTable(driver)
+    table = TemplateTable(browser)
 
     print('Checking all letters...')
     for letter in table.rows:
@@ -556,14 +560,14 @@ def pull_defaults(driver):
     table.status.save()
 
 
-def push(driver):
+def push(browser):
     """
     Push locally modified files (letters whose local checksum does not match
     the value in status.json) to Alma, and update status.json with new checksums.
     Params:
-        driver: selenium webdriver object
+        browser: Browser object
     """
-    table = TemplateTable(driver)
+    table = TemplateTable(browser)
 
     modified = []
     for letter in table.rows:
@@ -593,11 +597,11 @@ def push(driver):
                 sys.stdout.write('\n')
 
 
-def test_XML(driver, filename):
+def test_XML(browser, filename):
     """
     Run a "notification template" test in Alma. An XML file is uploaded and processed
     Params:
-        driver: selenium webdriver object
+        browser: Browser object
         filename: string with the name of the XML file in test-data to use
     """
     print("Testing XML file:", filename)
@@ -607,14 +611,14 @@ def test_XML(driver, filename):
         return
 
     print("full path:", path)
-    driver.get(
-        "https://bibsys-k.alma.exlibrisgroup.com/infra/action/pageAction.do?&xmlFileName=configuration.configure_notification_template.xml&pageViewMode=Edit&RenewBean=true&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.configure_notification_template.xml%26pageViewMode%3DEdit%26RenewBean%3Dtrue%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue")
+    browser.get(
+        "/infra/action/pageAction.do?&xmlFileName=configuration.configure_notification_template.xml&pageViewMode=Edit&RenewBean=true&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.configure_notification_template.xml%26pageViewMode%3DEdit%26RenewBean%3Dtrue%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue")
     time.sleep(2)
-    file_field = driver.find_element_by_id("pageBeannewFormFile")
+    file_field = browser.driver.find_element_by_id("pageBeannewFormFile")
     file_field.send_keys(path)
-    driver.find_element_by_id("cbuttonupload").click()
+    browser.driver.find_element_by_id("cbuttonupload").click()
     time.sleep(2)
-    driver.find_element_by_id("PAGE_BUTTONS_admconfigure_notification_templaterun_xsl_up").click()
+    browser.driver.find_element_by_id("PAGE_BUTTONS_admconfigure_notification_templaterun_xsl_up").click()
 
 
 import cmd
@@ -680,14 +684,14 @@ class Shell(cmd.Cmd, object):
     def execute(self, function):
         "Executes the function, and handle exceptions"
         try:
-            function(self.browser.driver)
+            function(self.browser)
         except Exception as e:
             self.handle_exception(e)
 
     def execute_args(self, function, *args):
         "Executes a function with arguments, and handle exceptions"
         try:
-            function(self.browser.driver, *args)
+            function(self.browser, *args)
         except Exception as e:
             self.handle_exception(e)
 
