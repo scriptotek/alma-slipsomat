@@ -145,19 +145,24 @@ class Browser(object):
         domain = self.config.get('login', 'domain')
         self.instance = self.config.get('login', 'instance')
         auth_type = self.config.get('login', 'auth_type')
+        institution = self.config.get('login', 'institution')
         username = self.config.get('login', 'username')
         password = self.config.get('login', 'password')
         self.driver = self.get_driver()
 
-        print('Logging in to {} as {}... '.format(domain, username))
-        self.get('/mng/login?auth={}'.format(auth_type))
+        print('Opening instance {}:{}'.format(self.instance, institution))
+
+        self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
         try:
-            element = self.driver.find_element_by_id("org")
-
-            select = Select(element)
-            select.select_by_value(domain)
-            element.submit()
+            if auth_type == 'SAML':
+                print('Logging in as {}@{}'.format(username, domain))
+                element = self.driver.find_element_by_id("org")
+                select = Select(element)
+                select.select_by_value(domain)
+                element.submit()
+            else:
+                print('Logging in as {}'.format(username))
 
             element = self.driver.find_element_by_id('username')
             element.send_keys(username)
