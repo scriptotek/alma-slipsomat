@@ -520,7 +520,7 @@ class LetterTemplate(object):
 
         # Update and save status.json
         modified = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
-        self.checksum = get_sha1(content)
+        self.checksum = get_sha1(local_content)
         self.modified = modified
         self.table.status.save()
         return True
