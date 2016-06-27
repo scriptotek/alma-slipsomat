@@ -76,8 +76,11 @@ We have mostly modified the existing ones, but have also added a few new. These 
   * `normalizedDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
   * `head` : Organization logo, letter name (heading) and right-aligned date
   * `headWithoutLogo` *(new)* : Letter name (heading) and right-aligned date
+  * `email-template` : The main email template
 * `mailReason.xsl`:
   * `toWhomIsConcerned` : Defines the greeting ("Hi!" in our case) used in most emails.
+  * `pickupNumber` : Template for generating the pickup number.
+  * `pickupNumberWithLabel` : More verbose version of the pickup number template.
 * `senderReceiver.xsl`:
   * `senderReceiver` : The full name and address of the sender and receiver. Used in formal letters.
 * `recordTitle.xsl` / `smsRecordTitle.xsl`:
@@ -96,7 +99,7 @@ Fordeler med løsningen inkluderer at det går kjapt (utskriftene kommer "umidde
 når man trykker "Print slip") og at det er en enkel løsning å drifte. En ulempe med
 løsningen er at html2ps ikke støtter CSS, så vi kan bare gjøre enkel formatering.
 
-## Specific elements
+## Spesielle elementer
 
 ### Libnummer (norsk ISIL-kode)
 
