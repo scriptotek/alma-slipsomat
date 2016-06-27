@@ -18,6 +18,7 @@ import hashlib
 import os.path
 import platform
 import json
+import traceback
 from xml.etree import ElementTree
 import atexit
 
@@ -720,6 +721,7 @@ class Shell(cmd.Cmd, object):
 
     def handle_exception(self, e):
         print("\nException:", e)
+        traceback.print_exc(file=sys.stdout)
         input("Press enter to restart browser:")
         browser.restart()
 
