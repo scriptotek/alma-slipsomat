@@ -489,8 +489,14 @@ class LetterTemplate(object):
         # Get new text
         local_content = open(self.filename, 'rb').read().decode('utf-8')
 
-        # Validate XML: This will throw an xml.etree.ElementTree.ParseErro on invalid XML
-        ElementTree.fromstring(local_content.encode('utf-8'))
+        # Validate XML: This will throw an xml.etree.ElementTree.ParseError on invalid XML
+        try:
+            ElementTree.fromstring(local_content.encode('utf-8'))
+        except ElementTree.ParseError as e:
+            print('\n' + Back.RED + Fore.WHITE + 'XML file contains error and will be skipped: ' + self.filename + Style.RESET_ALL)
+            print(Back.RED + Fore.WHITE + ' > ' + str(e) + Style.RESET_ALL)
+            return False
+
 
         # Normalize line endings
         local_content = normalize_line_endings(local_content)
