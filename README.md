@@ -1,7 +1,9 @@
 
 This is a collection of the XSL files used to generate letters and slips in Alma, as customized by the University of Oslo Library. Included in this repo are also scripts for pulling and pushing the files to Alma using Selenium browser automation (since no API or other access method is available).
 
-## Configuration
+## The slipsomat script
+
+### Configuration
 
 Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
 
@@ -17,12 +19,11 @@ Copy `config.cfg.dist` to `config.cfg` and fill in the empty values:
   * Example on Mac (Firefox installed through homebrew-cask): `/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin`
   * Example on Windows: `C:\Program Files (x86)\Mozilla Firefox\firefox.exe`
 
-
 Dependencies:
 
 Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
 
-## Workflow
+### Workflow
 
 - `git pull` to pull in changes from other users.
 
@@ -55,13 +56,18 @@ Install Python 2 or 3, then `pip install selenium colorama python-dateutil`.
   takes quite some time to run, since all letters have to be checked as Alma provides no
   information whatsoever on when the default letters were last updated.
 
-## Todo
+### Todo
 
 See [issues](https://github.com/scriptotek/alma-slipsomat/issues)
 
-## Overview of the files
+## Overview of the .xsl files
 
 Descriptions for the letters can be found in [Ex Libris Knowledge Base](http://knowledge.exlibrisgroup.com/Alma/Product_Documentation/Alma_Online_Help_%28English%29/Administration/Configuring_General_Alma_Functions/Configuring_Alma_Letters#Letter_Types).
+
+Documentation for the fields is not available, and probably isn't something we can expect anytime soon.
+Tamar Fuches wrote the following about it [on the Dev forum](https://developers.exlibrisgroup.com/discussions#!/forum/posts/list/273.page): "Regarding documentation, we do not have it currently. It will take time to get this ready."
+
+A curiosity of the letters is that they are full of typos, from the name `FulReasourceRequestSlipLetter` to field names like `autho_initials` and what have we, not to mention translation placeholders like `@@You_were_specify@@`. While this doesn't affect the end result, it's kinda annoying to work with, and makes you wonder if the application code is written using the same amount of carelessness.
 
 ### Templates
 
@@ -73,14 +79,15 @@ We have mostly modified the existing ones, but have also added a few new. These 
   * `contactUs`: link to contact information
   * `myAccount`: link to my account in Primo
 * `header.xsl`: Templates for style and introduction:
-  * `isoDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
-  * `head` : Organization logo, letter name (heading) and right-aligned date
-  * `headWithoutLogo` *(new)* : Letter name (heading) and right-aligned date
   * `email-template` : The main email template
 * `mailReason.xsl`:
   * `toWhomIsConcerned` : Defines the greeting ("Hi!" in our case) used in most emails.
   * `pickupNumber` : Template for generating the pickup number.
   * `pickupNumberWithLabel` : More verbose version of the pickup number template.
+  * `isoDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
+  * `stdDate` *(new)* : generates a date on the format `d. m Y` and strips away time.
+  * `head` : Organization logo, letter name (heading) and right-aligned date
+  * `headWithoutLogo` *(new)* : Letter name (heading) and right-aligned date
 * `senderReceiver.xsl`:
   * `senderReceiver` : The full name and address of the sender and receiver. Used in formal letters.
 * `recordTitle.xsl` / `smsRecordTitle.xsl`:
