@@ -73,7 +73,7 @@ We have mostly modified the existing ones, but have also added a few new. These 
   * `contactUs`: link to contact information
   * `myAccount`: link to my account in Primo
 * `header.xsl`: Templates for style and introduction:
-  * `normalizedDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
+  * `isoDate` *(new)* : generates a date in `YYYY-MM-DD` format from `dd/mm/yyy` and strips away time.
   * `head` : Organization logo, letter name (heading) and right-aligned date
   * `headWithoutLogo` *(new)* : Letter name (heading) and right-aligned date
   * `email-template` : The main email template
