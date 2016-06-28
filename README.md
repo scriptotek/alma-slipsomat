@@ -146,3 +146,13 @@ Eksempel på en meta-tagg: `<meta name="libnummer" content="103 0310"/>`.
 * Footer: The link targets for "Contact us" and "My account" are set as `email_my_account` and `email_contact_us` in the General Customer Parameters mapping table (Administration > General Configuration > Configuration Menu > Other Settings). Despite the naming, these can be http URLs.
 
 * For Sublime Text users: Sublime Text does not highlight .xsl files by default. Click the current syntax type in the lower right corner of the window. This will open the syntax selection menu with the option to Open all with current extension as... at the top of the menu. Select XML.
+
+* CSS support in e-mail clients varies alot! [This table](https://www.campaignmonitor.com/css/) is therefore super useful!
+
+* `xsl:function` is *not* supported!
+
+* Inclusion of additional files: Trying to add `<xsl:include href="header.xsl" />` to `SmsFulPlaceOnHoldShelfLetter.xsl` caused SMS messages not to be sent. Hard-to debug, since you can't
+test this using the "Notification Template" form.
+
+
+
