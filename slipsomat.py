@@ -415,12 +415,17 @@ class LetterTemplate(object):
 
     def _can_continue(self, txt, msg):
         # Compare text checksum with value in status.json
-        remote_chk = get_sha1(normalize_line_endings(txt))
+
         if not 'checksum' in self.table.status.letters[self.filename]:
             return True  # it's a new letter
 
         local_chk = self.table.status.letters[self.filename]['checksum']
-        if remote_chk == local_chk:
+        remote_chks = [
+            get_sha1(normalize_line_endings(txt)),
+            get_sha1(normalize_line_endings(txt) + "\n"),
+        ]
+
+        if local_chk not in remote_chks:
             return True
 
         print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
