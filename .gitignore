@@ -3,3 +3,4 @@ config.cfg
 .pydevproject
 .settings/
 __pycache__
+*.egg-info/

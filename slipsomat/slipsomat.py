@@ -57,7 +57,7 @@ class Browser(object):
     Selenium browser automation
     """
 
-    def __init__(self, options):
+    def __init__(self, options, cfg_file):
         """
         Construct a new Browser object
         Params:
@@ -66,7 +66,7 @@ class Browser(object):
         self.options = options
         self.driver = None
         if not options.test:  # test mode without driver
-            self.config = self.read_config()
+            self.config = self.read_config(cfg_file)
             self.connect()
             atexit.register(self.close)
 
@@ -82,7 +82,7 @@ class Browser(object):
             self.connect()
 
     @staticmethod
-    def read_config():
+    def read_config(cfg_file):
         if platform.system() == 'Windows':
             default_firefox_path = r'C:\Program Files (x86)\Mozilla Firefox\firefox.exe'
         elif platform.system() == 'Darwin':
@@ -91,7 +91,7 @@ class Browser(object):
             default_firefox_path = 'firefox'
 
         config = ConfigParser.ConfigParser()
-        config.read('config.cfg')
+        config.read(cfg_file)
 
         if config.get('login', 'username') == '':
             raise RuntimeError('No username configured')
@@ -747,10 +747,15 @@ class Shell(cmd.Cmd, object):
         "hook that is executed  when input is received"
         return line.strip()
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser()
 #     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
     parser.add_argument("-t", "--test", help="shell test, no browser", action="store_true")
     options = parser.parse_args()
-    browser = Browser(options)
+    if not os.path.exists('slipsomat.cfg'):
+        print('No slipsomat.cfg file found in this directory. Exiting.')
+        return
+
+    browser = Browser(options, 'slipsomat.cfg')
     Shell(browser).cmdloop()
