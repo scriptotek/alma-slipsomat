@@ -420,12 +420,13 @@ class LetterTemplate(object):
             return True  # it's a new letter
 
         local_chk = self.table.status.letters[self.filename]['checksum']
+        txt = normalize_line_endings(txt)
         remote_chks = [
-            get_sha1(normalize_line_endings(txt)),
-            get_sha1(normalize_line_endings(txt) + "\n"),
+            get_sha1(txt),
+            get_sha1(txt + "\n"),
         ]
 
-        if local_chk not in remote_chks:
+        if local_chk in remote_chks:
             return True
 
         print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
