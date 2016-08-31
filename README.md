@@ -14,16 +14,9 @@ Exchange to put some pressure on Ex Libris to do just that.
 You will need Python 2.7 or 3.3 or later. Install using `python setup.py install`,
 or `pip install -e . ` if you plan to hack on the script and want an *editable install*.
 
-Once installed, you can run `slipsomat` from any directory containing
-
-* a `slipsomat.cfg` file with information about the Alma instance you connect to and login credentials
-* a `xsl` folder containing all the (modified and unmodified) XSLT files
-* a `defaults` folder containing the default versions of the XSLT files
-
-Our own files can be found at https://github.com/scriptotek/alma-letters-ubo
-
-To get started with your own files, you can create an empty directory with a
-`slipsomat.cfg` holding the following
+Once installed, you can run `slipsomat` from any directory containing a `slipsomat.cfg`
+file. To get started with your own files, you can create an empty directory with a
+`slipsomat.cfg` with the following contents:
 
 ```
 [login]
@@ -39,7 +32,7 @@ browser=firefox
 firefox_path=
 ```
 
-and fill in the values:
+where you fill in the blank values.
 
 * `domain` is your Feide domain, e.g. `uio.no`
 * `instance` is the Alma instance name, e.g. `bibsys-k`
@@ -59,7 +52,23 @@ and fill in the values:
   `/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin`
   * Example on Windows: `C:\Program Files (x86)\Mozilla Firefox\firefox.exe`
 
+## Getting started
+
+The `slipsomat` command will give you an interactive shell where you can type various
+commands. Type `help` for an overview.
+
+To get started in an empty directory, type `pull` to pull in all the XSLT files from your Alma
+instance and store them in a folder named `xsl` (will be created if not there already).
+Optionally, type `defaults` to pull in all default letters too. Note that a `status.json` file
+is also created. This holds the checksums for all the letters, allowing the script to easily keep
+track of which files have been modified (locally or in Alma).
+
+Once you have a directory with all your files you're free to put them under version control
+if you like. Here's the repo we use for our files: https://github.com/scriptotek/alma-letters-ubo
+
 ## Workflow
+
+In a workspace directory (a directory having a `slipsomat.cfg` file):
 
 1. Start by doing `git pull` to pull in changes from other users.
 
