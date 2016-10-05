@@ -177,7 +177,8 @@ class Browser(object):
             pass
 
         try:
-            self.driver.find_element_by_link_text('Tasks')
+            # Look for some known element on the Alma main screen
+            self.driver.find_element_by_id('ALMA_MENU_TOP_NAV_Search')
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
