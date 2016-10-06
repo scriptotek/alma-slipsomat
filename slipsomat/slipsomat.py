@@ -178,7 +178,9 @@ class Browser(object):
 
         try:
             # Look for some known element on the Alma main screen
-            self.driver.find_element_by_id('ALMA_MENU_TOP_NAV_Search')
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, 'ALMA_MENU_TOP_NAV_Search'))
+            )
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
