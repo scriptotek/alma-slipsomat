@@ -150,6 +150,7 @@ class Browser(object):
         username = self.config.get('login', 'username')
         password = self.config.get('login', 'password')
         self.driver = self.get_driver()
+        self.driver.set_window_size(800, 640)
 
         print('Opening instance {}:{}'.format(self.instance, institution))
 
@@ -178,7 +179,9 @@ class Browser(object):
 
         try:
             # Look for some known element on the Alma main screen
-            self.driver.find_element_by_id('ALMA_MENU_TOP_NAV_Search')
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.ID, 'ALMA_MENU_TOP_NAV_Search'))
+            )
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
