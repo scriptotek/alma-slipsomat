@@ -148,7 +148,7 @@ class Browser(object):
         password = self.config.get('login', 'password')
 
         self.driver = self.get_driver()
-        self.driver.set_window_size(800, 640)
+        self.driver.set_window_size(1000, 800)
 
         print('Opening instance {}:{}'.format(self.instance, institution))
 
