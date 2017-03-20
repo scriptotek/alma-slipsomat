@@ -154,32 +154,33 @@ class Browser(object):
 
         self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
-        try:
-            if auth_type == 'SAML':
-                print('Logging in as {}@{}'.format(username, domain))
-                element = self.driver.find_element_by_id("org")
-                select = Select(element)
-                select.select_by_value(domain)
-                element.submit()
-            else:
-                print('Logging in as {}'.format(username))
+        wait = WebDriverWait(self.driver, 10)
 
-            element = self.driver.find_element_by_id('username')
-            element.send_keys(username)
+        if auth_type == 'SAML':
+            print('Logging in as {}@{}'.format(username, domain))
 
-            element = self.driver.find_element_by_id('password')
-            element.send_keys(password)
+            element = wait.until(EC.visibility_of_element_located((By.ID, 'org')))
+            select = Select(element)
+            select.select_by_value(domain)
 
-            element.submit()
+            element = self.driver.find_element_by_id('submit')
+            element.click()
+            # We cannot use submit() because of
+            # http://stackoverflow.com/questions/833032/submit-is-not-a-function-error-in-javascript
+        else:
+            print('Logging in as {}'.format(username))
 
-        except NoSuchElementException:
-            pass
+        element = wait.until(EC.visibility_of_element_located((By.ID, 'username')))
+        element.send_keys(username)
+
+        element = self.driver.find_element_by_id('password')
+        element.send_keys(password)
+
+        element.submit()
 
         try:
             # Look for some known element on the Alma main screen
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.ID, 'ALMA_MENU_TOP_NAV_Search'))
-            )
+            wait.until(EC.visibility_of_element_located((By.ID, 'ALMA_MENU_TOP_NAV_Search')))
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
