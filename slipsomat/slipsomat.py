@@ -314,6 +314,13 @@ class LetterTemplate(object):
         self.checksum = checksum
         self.default_checksum = default_checksum
 
+    def scroll_into_view_and_click(self, value, by=By.ID):
+        wait = WebDriverWait(self.table.browser.driver, 10)
+        element = self.table.browser.driver.find_element(selector)
+        self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
+        element = wait.until(EC.element_to_be_clickable(selector))
+        element.click();
+
     def view(self):
 
         try:
@@ -338,17 +345,16 @@ class LetterTemplate(object):
         return True
 
     def view_default(self):
-        actionMenu = self.table.browser.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
-        actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
-        if actionMenu:
-            actionMenu.click()
-            viewDefaultBtn = actionMenu.find_element_by_id('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
-            viewDefaultBtn.click()
 
-        # Locate filename and content
-        element = WebDriverWait(self.table.browser.driver, 10).until(
-            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
-        )
+        # Open "Actions" menu
+        self.scroll_into_view_and_click('ROW_ACTION_LI_fileList_{}'.format(self.index))
+
+        # Click "View Default" menu item
+        self.scroll_into_view_and_click('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
+
+        # Wait for new page to load
+        wait = WebDriverWait(self.table.browser.driver, 10)
+        element = wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
 
         filename = element.get_attribute('value').replace('../', '')
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
@@ -362,20 +368,25 @@ class LetterTemplate(object):
         el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) == 0:
 
-            actionBtn = self.table.browser.driver.find_elements_by_css_selector('#input_fileList_{}'.format(self.index))
+            actionBtnSelector = '#input_fileList_{}'.format(self.index)
+
+            actionBtn = self.table.browser.driver.find_elements_by_css_selector(actionBtnSelector)
             if len(actionBtn) != 0:
-                actionBtn[0].click()
+                # To avoid
+                #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
+                #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
+                self.scroll_into_view_and_click(actionBtnSelector, By.CSS_SELECTOR)
 
-            editBtn = self.table.browser.driver.find_elements_by_css_selector('#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index))
+            editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index)
+            editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
             if len(editBtn) != 0:
-                editBtn[0].click()
+                self.scroll_into_view_and_click(editBtnSelector)
             else:
-                customizeBtn = self.table.browser.driver.find_elements_by_css_selector('#ROW_ACTION_LI_fileList_{} input'.format(self.index))
-                customizeBtn[0].click()
+                customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} input'.format(self.index)
+                self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
 
-        element = WebDriverWait(self.table.browser.driver, 10).until(
-            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
-        )
+        wait = WebDriverWait(self.table.browser.driver, 10)
+        element = wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
         filename = element.get_attribute('value').replace('../', '')
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
 
