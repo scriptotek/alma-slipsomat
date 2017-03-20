@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import inquirer
 import dateutil.parser
 import time
 import sys
@@ -57,18 +58,15 @@ class Browser(object):
     Selenium browser automation
     """
 
-    def __init__(self, options, cfg_file):
+    def __init__(self, cfg_file):
         """
         Construct a new Browser object
         Params:
-            options: Namespace object
+            cfg_file: Name of config file
         """
-        self.options = options
         self.driver = None
-        if not options.test:  # test mode without driver
-            self.config = self.read_config(cfg_file)
-            self.connect()
-            atexit.register(self.close)
+        self.config = self.read_config(cfg_file)
+        self.instance = self.config.get('login', 'instance')
 
     def close(self):
         try:
@@ -144,11 +142,11 @@ class Browser(object):
 
     def connect(self):
         domain = self.config.get('login', 'domain')
-        self.instance = self.config.get('login', 'instance')
         auth_type = self.config.get('login', 'auth_type')
         institution = self.config.get('login', 'institution')
         username = self.config.get('login', 'username')
         password = self.config.get('login', 'password')
+
         self.driver = self.get_driver()
         self.driver.set_window_size(800, 640)
 
@@ -738,8 +736,29 @@ class Shell(cmd.Cmd, object):
     def handle_exception(self, e):
         print("\nException:", e)
         traceback.print_exc(file=sys.stdout)
-        input("Press enter to restart browser:")
-        browser.restart()
+
+        q = inquirer.List('goto',
+                          message='Now what?',
+                          choices=['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
+                          )
+        answers = inquirer.prompt([q])
+
+        if answers['goto'] == 'Debug with ipdb':
+            try:
+                import ipdb
+            except ImportError:
+                print('Please run "pip install ipdb" to install ipdb')
+                sys.exit(1)
+            ipdb.post_mortem()
+            sys.exit(0)
+        elif answers['goto'] == 'Debug with pdb':
+            import pdb
+            pdb.post_mortem()
+            sys.exit(0)
+        elif answers['goto'] == 'Restart browser':
+            self.browser.restart()
+        else:
+            sys.exit(0)
 
     def execute(self, function, *args):
         "Executes the function, and handle exceptions"
@@ -762,5 +781,10 @@ def main():
         print('No slipsomat.cfg file found in this directory. Exiting.')
         return
 
-    browser = Browser(options, 'slipsomat.cfg')
+    browser = Browser('slipsomat.cfg')
+
+    if not options.test:  # test mode without driver
+        browser.connect()
+        atexit.register(browser.close)
+
     Shell(browser).cmdloop()
