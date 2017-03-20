@@ -125,7 +125,9 @@ class Browser(object):
             browser_path = self.config.get('selenium', 'firefox_path')
             browser_binary = FirefoxBinary(browser_path)
 
-            return Firefox(firefox_binary=browser_binary)
+            driver = Firefox(firefox_binary=browser_binary)
+            driver._is_remote = False  # Workaround for http://stackoverflow.com/a/42770761/489916
+            return driver
 
         if browser_name == 'chrome':
             from selenium.webdriver import Chrome
