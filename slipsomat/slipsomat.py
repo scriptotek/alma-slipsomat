@@ -318,9 +318,9 @@ class LetterTemplate(object):
 
     def scroll_into_view_and_click(self, value, by=By.ID):
         wait = WebDriverWait(self.table.browser.driver, 10)
-        element = self.table.browser.driver.find_element(selector)
+        element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
-        element = wait.until(EC.element_to_be_clickable(selector))
+        element = wait.until(EC.element_to_be_clickable((by, value)))
         element.click();
 
     def view(self):
