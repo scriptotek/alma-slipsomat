@@ -52,6 +52,12 @@ where you fill in the blank values.
   `/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin`
   * Example on Windows: `C:\Program Files (x86)\Mozilla Firefox\firefox.exe`
 
+
+## Debugging
+
+If you have `inquirer` installed (does not work on Windows), slipsomat will give
+you some options for starting a debug session if the script crashes.
+
 ## Getting started
 
 The `slipsomat` command will give you an interactive shell where you can type various

@@ -9,7 +9,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-import inquirer
+try:
+    import inquirer
+except ImportError:
+    inquirer = None
+
 import dateutil.parser
 import time
 import sys
@@ -771,28 +775,31 @@ class Shell(cmd.Cmd, object):
         print("\nException:", e)
         traceback.print_exc(file=sys.stdout)
 
-        q = inquirer.List('goto',
-                          message='Now what?',
-                          choices=['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
-                          )
-        answers = inquirer.prompt([q])
-
-        if answers['goto'] == 'Debug with ipdb':
-            try:
-                import ipdb
-            except ImportError:
-                print('Please run "pip install ipdb" to install ipdb')
-                sys.exit(1)
-            ipdb.post_mortem()
+        if inquirer is None:
             sys.exit(0)
-        elif answers['goto'] == 'Debug with pdb':
-            import pdb
-            pdb.post_mortem()
-            sys.exit(0)
-        elif answers['goto'] == 'Restart browser':
-            self.browser.restart()
         else:
-            sys.exit(0)
+            q = inquirer.List('goto',
+                              message='Now what?',
+                              choices=['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
+                              )
+            answers = inquirer.prompt([q])
+
+            if answers['goto'] == 'Debug with ipdb':
+                try:
+                    import ipdb
+                except ImportError:
+                    print('Please run "pip install ipdb" to install ipdb')
+                    sys.exit(1)
+                ipdb.post_mortem()
+                sys.exit(0)
+            elif answers['goto'] == 'Debug with pdb':
+                import pdb
+                pdb.post_mortem()
+                sys.exit(0)
+            elif answers['goto'] == 'Restart browser':
+                self.browser.restart()
+            else:
+                sys.exit(0)
 
     def execute(self, function, *args):
         "Executes the function, and handle exceptions"
