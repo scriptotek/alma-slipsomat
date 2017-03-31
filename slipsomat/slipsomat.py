@@ -776,6 +776,7 @@ class Shell(cmd.Cmd, object):
         traceback.print_exc(file=sys.stdout)
 
         if inquirer is None:
+            print('Please "pip install inquirer" if you would like more debug options')
             sys.exit(0)
         else:
             q = inquirer.List('goto',
