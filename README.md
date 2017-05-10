@@ -29,7 +29,6 @@ password=
 
 [selenium]
 browser=firefox
-firefox_path=
 ```
 
 where you fill in the blank values.
@@ -45,17 +44,11 @@ where you fill in the blank values.
 * `username` is your username.
 * `password` can be left blank if you want to be asked for it each time. This
   is the recommended solution, since the password is stored in plain text.
-
-* `browser` can be set to `firefox`, `chrome` or `phantomjs`. Currently, `firefox`
-  is the driver we've had the most success with, and it's also the easiest to
-  get started with. Both `chrome` and `phantomjs` requires separate driver
-  installs, while `firefox` can use your standard firefox installation.
-* `firefox_path` is the path to the Firefox binary (the path should not be quoted
-  even if it contains spaces)
-  * Example on Mac (Firefox installed through homebrew-cask):
-  `/opt/homebrew-cask/Caskroom/firefox/38.0.5/Firefox.app/Contents/MacOS/firefox-bin`
-  * Example on Windows: `C:\Program Files (x86)\Mozilla Firefox\firefox.exe`
-
+* `browser` can be set to `firefox`, `chrome` or `phantomjs`. The corresponding
+  driver must be installed (GeckoDriver for Firefox, ChromeDriver for Chrome).
+  I've not had so much success with PhantomJS, but both Firefox and Chrome works
+  well most of the time, but browser updates sometimes cause Selenium to crash.
+  Updating both Selenium and the driver(s) often help in that case.
 
 ## Debugging
 

@@ -85,13 +85,6 @@ class Browser(object):
 
     @staticmethod
     def read_config(cfg_file):
-        if platform.system() == 'Windows':
-            default_firefox_path = r'C:\Program Files (x86)\Mozilla Firefox\firefox.exe'
-        elif platform.system() == 'Darwin':
-            default_firefox_path = '/Applications/Firefox.app/Contents/MacOS/firefox-bin'
-        else:
-            default_firefox_path = 'firefox'
-
         config = ConfigParser.ConfigParser({'domain': ''})
         config.read(cfg_file)
 
@@ -110,9 +103,6 @@ class Browser(object):
         if not config.has_option('selenium', 'browser') or config.get('selenium', 'browser') == '':
             config.set('selenium', 'browser', 'firefox')
 
-        if not config.has_option('selenium', 'firefox_path') or config.get('selenium', 'firefox_path') == '':
-            config.set('selenium', 'firefox_path', default_firefox_path)
-
         return config
 
     def get_driver(self):
@@ -123,8 +113,7 @@ class Browser(object):
         if browser_name == 'firefox':
             from selenium.webdriver import Firefox
 
-            browser_path = self.config.get('selenium', 'firefox_path')
-            browser_binary = FirefoxBinary(browser_path)
+            browser_binary = FirefoxBinary()
 
             driver = Firefox(firefox_binary=browser_binary)
             driver._is_remote = False  # Workaround for http://stackoverflow.com/a/42770761/489916
