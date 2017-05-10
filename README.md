@@ -20,10 +20,10 @@ file. To get started with your own files, you can create an empty directory with
 
 ```
 [login]
+auth_type=SAML
 domain=
 instance=
 institution=
-auth_type=SAML
 username=
 password=
 
@@ -34,11 +34,15 @@ firefox_path=
 
 where you fill in the blank values.
 
-* `domain` is your Feide domain, e.g. `uio.no`
-* `instance` is the Alma instance name, e.g. `bibsys-k`
+* `auth_type=SAML` means you authenticate using a SAML provider such as Feide
+  or Shibboleth. Set it to `auth_type=basic` to use the standard Alma login.
+* `domain` is your Feide domain, e.g. `uio.no`. If you don't use Feide as your
+  SAML provider, you can leave this empty.
+* `instance` is the Alma instance name, which is the first part of your ALMA URL.
+  If your Alma URL is `bibsys-k.alma.exlibrisgroup.com`, then `bibsys-k` is the
+  instance name.
 * `institution` the Alma institution name, e.g. `47BIBSYS_UBO`
-* `auth_type=SAML` means you authenticate using Feide.
-* `username` is your (Feide) username
+* `username` is your username.
 * `password` can be left blank if you want to be asked for it each time. This
   is the recommended solution, since the password is stored in plain text.
 

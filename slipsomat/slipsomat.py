@@ -92,14 +92,11 @@ class Browser(object):
         else:
             default_firefox_path = 'firefox'
 
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser.ConfigParser({'domain': ''})
         config.read(cfg_file)
 
         if config.get('login', 'username') == '':
             raise RuntimeError('No username configured')
-
-        if config.get('login', 'domain') == '':
-            raise RuntimeError('No domain configured')
 
         if config.get('login', 'password') == '':
             config.set('login', 'password', getpass.getpass())
@@ -162,7 +159,7 @@ class Browser(object):
 
         wait = WebDriverWait(self.driver, 10)
 
-        if auth_type == 'SAML':
+        if auth_type == 'SAML' and domain != '':
             print('Logging in as {}@{}'.format(username, domain))
 
             element = wait.until(EC.visibility_of_element_located((By.ID, 'org')))
