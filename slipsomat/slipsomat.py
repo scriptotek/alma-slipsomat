@@ -372,7 +372,7 @@ class LetterTemplate(object):
             editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index)
             editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
             if len(editBtn) != 0:
-                self.scroll_into_view_and_click(editBtnSelector)
+                self.scroll_into_view_and_click(editBtnSelector, By.CSS_SELECTOR)
             else:
                 customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} input'.format(self.index)
                 self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
