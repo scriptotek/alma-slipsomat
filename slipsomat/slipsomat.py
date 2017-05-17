@@ -8,6 +8,7 @@ from selenium.webdriver.remote.errorhandler import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 
 try:
     import inquirer
@@ -168,7 +169,7 @@ class Browser(object):
         element = self.driver.find_element_by_id('password')
         element.send_keys(password)
 
-        element.submit()
+        element.send_keys(Keys.RETURN)
 
         try:
             # Look for some known element on the Alma main screen
