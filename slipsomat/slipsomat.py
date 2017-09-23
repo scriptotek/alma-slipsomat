@@ -63,7 +63,7 @@ class Browser(object):
     Selenium browser automation
     """
 
-    def __init__(self, cfg_file):
+    def __init__(self, cfg_file, default_timeout=10):
         """
         Construct a new Browser object
         Params:
@@ -72,6 +72,23 @@ class Browser(object):
         self.driver = None
         self.config = self.read_config(cfg_file)
         self.instance = self.config.get('login', 'instance')
+        self.default_timeout = default_timeout
+
+    def waiter(self):
+        return WebDriverWait(self.driver, self.default_timeout)
+
+    def wait_for(self, by, by_value):
+        return self.wait.until(EC.visibility_of_element_located((by, by_value)))
+
+    def send_keys(self, by, by_value, text):
+        element = self.wait_for(by, by_value)
+        element.send_keys(text)
+        return element
+
+    def click(self, by, by_value):
+        element = self.wait.until(EC.element_to_be_clickable((by, by_value)))
+        element.click()
+        return element
 
     def close(self):
         try:
@@ -142,17 +159,16 @@ class Browser(object):
 
         self.driver = self.get_driver()
         self.driver.set_window_size(1000, 800)
+        self.wait = self.waiter()
 
         print('Opening instance {}:{}'.format(self.instance, institution))
 
         self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
-        wait = WebDriverWait(self.driver, 10)
-
         if auth_type == 'SAML' and domain != '':
             print('Logging in as {}@{}'.format(username, domain))
 
-            element = wait.until(EC.visibility_of_element_located((By.ID, 'org')))
+            element = self.wait.until(EC.visibility_of_element_located((By.ID, 'org')))
             select = Select(element)
             select.select_by_value(domain)
 
@@ -163,17 +179,13 @@ class Browser(object):
         else:
             print('Logging in as {}'.format(username))
 
-        element = wait.until(EC.visibility_of_element_located((By.ID, 'username')))
-        element.send_keys(username)
-
-        element = self.driver.find_element_by_id('password')
-        element.send_keys(password)
-
+        self.send_keys(By.ID, 'username', username)
+        element = self.send_keys(By.ID, 'password', password)
         element.send_keys(Keys.RETURN)
 
         try:
             # Look for some known element on the Alma main screen
-            wait.until(EC.visibility_of_element_located((By.ID, 'ALMA_MENU_TOP_NAV_Search')))
+            self.wait_for(By.ID, 'ALMA_MENU_TOP_NAV_Search')
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
@@ -306,12 +318,12 @@ class LetterTemplate(object):
         self.modified = modified
         self.checksum = checksum
         self.default_checksum = default_checksum
+        self.wait = self.table.browser.waiter()
 
     def scroll_into_view_and_click(self, value, by=By.ID):
-        wait = WebDriverWait(self.table.browser.driver, 10)
         element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
-        element = wait.until(EC.element_to_be_clickable((by, value)))
+        element = self.wait.until(EC.element_to_be_clickable((by, value)))
         element.click();
 
     def view(self):
@@ -323,7 +335,7 @@ class LetterTemplate(object):
             viewLink.click()
 
         # Locate filename and content
-        element = WebDriverWait(self.table.browser.driver, 10).until(
+        element = self.wait.until(
             EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
         )
         filename = element.get_attribute('value').replace('../', '')
@@ -346,8 +358,7 @@ class LetterTemplate(object):
         self.scroll_into_view_and_click('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
 
         # Wait for new page to load
-        wait = WebDriverWait(self.table.browser.driver, 10)
-        element = wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
 
         filename = element.get_attribute('value').replace('../', '')
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
@@ -378,8 +389,7 @@ class LetterTemplate(object):
                 customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} input'.format(self.index)
                 self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
 
-        wait = WebDriverWait(self.table.browser.driver, 10)
-        element = wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
         filename = element.get_attribute('value').replace('../', '')
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
 
@@ -534,7 +544,7 @@ class LetterTemplate(object):
         btn.click()
 
         # Wait for the table view
-        element = WebDriverWait(self.table.browser.driver, 10).until(
+        element = self.wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
         )
 
@@ -666,6 +676,8 @@ def test_XML(browser, filename):
         browser: Browser object
         filename: string with the name of the XML file in test-data to use
     """
+    wait = browser.waiter()
+
     print("Testing XML file:", filename)
     path = os.path.abspath(os.path.join("test-data", filename))
     if not os.path.isfile(path):
@@ -684,7 +696,7 @@ def test_XML(browser, filename):
 
     # First wait for the upload button to be removed from DOM, indicating the
     # current page is unloaded
-    WebDriverWait(browser.driver, 10).until(
+    wait.until(
         EC.staleness_of(upload_btn)
     )
 
@@ -692,7 +704,7 @@ def test_XML(browser, filename):
     # Note that we use the bottom run button, not the upper one, since the
     # upper one can be covered by stuff overflowing from the navbar if the
     # window is to narrow
-    run_btn = WebDriverWait(browser.driver, 10).until(
+    run_btn = wait.until(
         EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
     )
 
