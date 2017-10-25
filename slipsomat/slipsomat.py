@@ -264,14 +264,25 @@ class TemplateTable(object):
         self.rows = self.parse_rows()
 
     def open(self):
-        # Open 'Open Alma configuration'
-        try:
-            backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
-            backBtn.click()
-        except NoSuchElementException:
+
+        # If we are at specific letter, press the "go back" button.
+        elems = self.browser.driver.find_elements_by_css_selector('.pageTitle')
+        if len(elems) != 0:
+            title = elems[0].text.strip()
+            if title == 'Configuration File':
+                try:
+                    backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
+                    backBtn.click()
+                except NoSuchElementException:
+                    pass
+
+        elems = self.browser.driver.find_elements_by_xpath('//button[@aria-label="Open Alma configuration"]')
+        if len(elems) != 0:
+            # Open Alma configuration
             self.browser.click(By.XPATH, '//button[@aria-label="Open Alma configuration"]')
             self.browser.click(By.XPATH, '//a[@href="#CONF_MENU5"]')
             self.browser.click(By.XPATH, '//*[text() = "Customize Letters"]')
+
         self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
 
     def parse_rows(self):
