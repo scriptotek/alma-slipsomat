@@ -49,7 +49,7 @@ colorama.init()
 
 def normalize_line_endings(txt):
     # Normalize to unix line endings
-    return txt.replace('\r\n', '\n').replace('\r', '\n')
+    return txt.replace('\r\n', '\n').replace('\r', '\n').strip()
 
 
 def get_sha1(txt):
