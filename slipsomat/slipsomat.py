@@ -370,16 +370,16 @@ class LetterTemplate(object):
             #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
             self.scroll_into_view_and_click('#input_fileList_{}'.format(self.index), By.CSS_SELECTOR)
 
-            editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index)
+            editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(self.index)
             editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
             if len(editBtn) != 0:
                 self.scroll_into_view_and_click(editBtnSelector, By.CSS_SELECTOR)
             else:
-                customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} input'.format(self.index)
+                customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} a'.format(self.index)
                 self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
 
         element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
-        filename = element.get_attribute('value').replace('../', '')
+        filename = element.text.replace('../', '')
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
 
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
