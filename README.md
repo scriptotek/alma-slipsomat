@@ -108,3 +108,36 @@ The shell has a command history, and tab completion. For example `test Ful<tab><
 
 * [open issues](https://github.com/scriptotek/alma-slipsomat/issues)
 * [alma-letters-ubo](https://github.com/scriptotek/alma-letters-ubo) for our XSLT files
+
+
+## Development
+
+Given that you have created a `slipsomat.cfg` file, here's how to start
+experimenting:
+
+```python
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from slipsomat.slipsomat import Browser, TemplateTable
+
+# We set a quite short timeout (3 seconds) since we don't want to wait
+# a long time every time we write a wrong selector.
+browser = Browser('slipsomat.cfg', default_timeout=3)
+
+# Open Browser and login using credentials from slipsomat.cfg
+browser.connect()
+
+table = TemplateTable(browser)
+letter = table.rows[0]
+letter.view_default()
+
+wait = browser.waiter()
+# Try looking for some element and click it
+element = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@aria-label="Open Alma configuration"]')))
+element.click()
+
+
+```
+

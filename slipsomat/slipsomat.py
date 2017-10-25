@@ -185,7 +185,7 @@ class Browser(object):
 
         try:
             # Look for some known element on the Alma main screen
-            self.wait_for(By.ID, 'ALMA_MENU_TOP_NAV_Search')
+            self.wait_for(By.CSS_SELECTOR, '.logoAlma')
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
@@ -260,29 +260,23 @@ class TemplateTable(object):
     def __init__(self, browser):
         self.browser = browser
         self.status = LettersStatus(self)
-
-        # self.table_url = '/infra/action/pageAction.do?xmlFileName=configuration.file_table.config_file_list.xml&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&resetPaginationContext=true'
-        self.table_url = '/infra/action/pageAction.do?&xmlFileName=configuration.file_table.config_file_list.xml&pageBean.scopeText=&pageViewMode=Edit&pageBean.groupId=8&pageBean.subGroupId=13&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.file_table.config_file_list.xml%26pageBean.scopeText%3D%26pageViewMode%3DEdit%26pageBean.groupId%3D8%26pageBean.subGroupId%3D13%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue'
-
         self.open()
         self.rows = self.parse_rows()
 
     def open(self):
-        # Open the General Configuration menu
-        # driver.get('/infra/action/pageAction.do?xmlFileName=configuration_setup.configuration_mng.xml&pageViewMode=Edit&pageBean.menuKey=com.exlibris.dps.menu_general_conf_wizard&operation=LOAD&pageBean.helpId=general_configuration&pageBean.currentUrl=xmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dfalse&pageBean.navigationBackUrl=..%2Faction%2Fhome.do&resetPaginationContext=true&showBackButton=false')
-        # Click 'Customize Letters'
-        # element = driver.find_element_by_link_text('Customize Letters')
-        # element.click()
-
-        # Open 'Customize Letters'
-        self.browser.get(self.table_url)
-
-        # Wait for the table
-        WebDriverWait(self.browser.driver, 10).until(
-            EC.presence_of_element_located((By.ID, 'TABLE_DATA_fileList'))
-        )
+        # Open 'Open Alma configuration'
+        try:
+            backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
+            backBtn.click()
+        except NoSuchElementException:
+            self.browser.click(By.XPATH, '//button[@aria-label="Open Alma configuration"]')
+            self.browser.click(By.XPATH, '//a[@href="#CONF_MENU5"]')
+            self.browser.click(By.XPATH, '//*[text() = "Customize Letters"]')
+        self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
 
     def parse_rows(self):
+        self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+
         elems = self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList .jsRecordContainer')
         rows = []
         sys.stdout.write('Reading table... ')
@@ -291,7 +285,8 @@ class TemplateTable(object):
             sys.stdout.write('\rReading table... {}'.format(n))
             sys.stdout.flush()
 
-            filename = el.find_element_by_id('HREF_INPUT_SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename'.format(n)).text.replace('../', '')
+
+            filename = el.find_element_by_id('SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename'.format(n)).text.replace('../', '')
             modified = el.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(n)).text
             if filename not in self.status.letters:
                 self.status.letters[filename] = {}
@@ -323,36 +318,33 @@ class LetterTemplate(object):
     def scroll_into_view_and_click(self, value, by=By.ID):
         element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
+        # Need to scroll a little bit more because of the fixed header
+        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-200)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
-        element.click();
+        element.click()
 
     def view(self):
 
         try:
+            # Check if we are already on the view page
             self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         except NoSuchElementException:
-            viewLink = self.table.browser.driver.find_elements_by_css_selector('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index))[0]
-            viewLink.click()
+            # Otherwise, click the link
+            self.scroll_into_view_and_click('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index), By.CSS_SELECTOR)
 
         # Locate filename and content
-        element = self.wait.until(
-            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
-        )
-        filename = element.get_attribute('value').replace('../', '')
+        element = self.table.browser.wait_for(By.ID, 'pageBeanconfigFilefilename')
+        filename = element.text.replace('../', '')
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
 
     def is_customized(self):
-        try:
-            actionMenu = self.table.browser.driver.find_element_by_id('ROW_ACTION_LI_fileList_{}'.format(self.index))
-            actionLink = actionMenu.find_element_by_id('input_fileList_{}'.format(self.index))
-        except NoSuchElementException:
-            return False
-        return True
+        updatedBy = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_cfgFileupdatedBy'.format(self.index))
+        return updatedBy.text != '-'
 
     def view_default(self):
 
         # Open "Actions" menu
-        self.scroll_into_view_and_click('ROW_ACTION_LI_fileList_{}'.format(self.index))
+        self.scroll_into_view_and_click('input_fileList_{}'.format(self.index))
 
         # Click "View Default" menu item
         self.scroll_into_view_and_click('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
@@ -360,7 +352,8 @@ class LetterTemplate(object):
         # Wait for new page to load
         element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
 
-        filename = element.get_attribute('value').replace('../', '')
+        # Assert that filename is correct
+        filename = element.text.replace('../', '')
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
 
     def edit(self):
@@ -372,14 +365,10 @@ class LetterTemplate(object):
         el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) == 0:
 
-            actionBtnSelector = '#input_fileList_{}'.format(self.index)
-
-            actionBtn = self.table.browser.driver.find_elements_by_css_selector(actionBtnSelector)
-            if len(actionBtn) != 0:
-                # To avoid
-                #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
-                #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
-                self.scroll_into_view_and_click(actionBtnSelector, By.CSS_SELECTOR)
+            # To avoid
+            #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
+            #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
+            self.scroll_into_view_and_click('#input_fileList_{}'.format(self.index), By.CSS_SELECTOR)
 
             editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit input'.format(self.index)
             editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
