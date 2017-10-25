@@ -477,7 +477,9 @@ class LetterTemplate(object):
         self.table.open()
 
     def pull_default(self):
-        if self.is_customized():
+        is_customized = self.is_customized()
+
+        if is_customized:
             self.view_default()
         else:
             self.view()
@@ -485,15 +487,22 @@ class LetterTemplate(object):
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         content = normalize_line_endings(txtarea.text)
 
+        # Write contents to default letter
         filename = 'defaults/' + self.filename
-
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
-
         with open(filename, 'wb') as f:
             f.write(content.encode('utf-8'))
-
         self.default_checksum = get_sha1(content)
+
+        if not is_customized:
+            # Write contents to standard letter as well
+            filename = self.filename
+            if not os.path.exists(os.path.dirname(filename)):
+                os.makedirs(os.path.dirname(filename))
+            with open(filename, 'wb') as f:
+                f.write(content.encode('utf-8'))
+            self.checksum = get_sha1(content)
 
         # Go back
         self.table.open()
