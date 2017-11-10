@@ -693,33 +693,29 @@ def test_XML(browser, filename):
         print("File not found:", path)
         return
 
-    print("full path:", path)
-    browser.get(
-        "/infra/action/pageAction.do?&xmlFileName=configuration.configure_notification_template.xml&pageViewMode=Edit&RenewBean=true&pageBean.backUrl=%2Fmng%2Faction%2Fmenus.do%3FmenuKey%3Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader&pageBean.navigationBackUrl=%2Finfra%2Faction%2FpageAction.do%3FxmlFileName%3Dconfiguration_setup.configuration_mng.xml%26pageViewMode%3DEdit%26pageBean.menuKey%3Dcom.exlibris.dps.menu_general_conf_wizard%26operation%3DLOAD%26pageBean.helpId%3Dgeneral_configuration%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue&resetPaginationContext=true&showBackButton=true&pageBean.currentUrl=%26xmlFileName%3Dconfiguration.configure_notification_template.xml%26pageViewMode%3DEdit%26RenewBean%3Dtrue%26pageBean.backUrl%3D%252Fmng%252Faction%252Fmenus.do%253FmenuKey%253Dcom.exlibris.dps.adm.general.menu.advanced.general.generalHeader%26resetPaginationContext%3Dtrue%26showBackButton%3Dtrue")
+    # Open Alma configuration
+    browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+    browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
+    browser.click(By.XPATH, '//*[text() = "Notification Template"]')
+
+    browser.wait_for(By.ID, 'cbuttonupload')
 
     # Upload the XML
     file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
     file_field.send_keys(path)
+
     upload_btn = browser.driver.find_element_by_id('cbuttonupload')
     upload_btn.click()
 
-    # First wait for the upload button to be removed from DOM, indicating the
-    # current page is unloaded
-    wait.until(
-        EC.staleness_of(upload_btn)
-    )
+    browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
 
-    # Then wait for the run button to re-appear.
-    # Note that we use the bottom run button, not the upper one, since the
-    # upper one can be covered by stuff overflowing from the navbar if the
-    # window is to narrow
     run_btn = wait.until(
         EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
     )
 
     # Clicking the button right away caused the screen to hang on the spinner,
     # so we add a small sleep.
-    time.sleep(1)
+    # time.sleep(1)
 
     run_btn.click()
 
