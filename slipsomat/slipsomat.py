@@ -275,12 +275,18 @@ class TemplateTable(object):
                     backBtn.click()
                 except NoSuchElementException:
                     pass
+                try:
+                    backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonnavigationcancel')
+                    backBtn.click()
+                except NoSuchElementException:
+                    pass
 
-        elems = self.browser.driver.find_elements_by_xpath('//button[@aria-label="Open Alma configuration"]')
+
+        elems = self.browser.driver.find_elements_by_xpath('//*[@aria-label="Open Alma configuration"]')
         if len(elems) != 0:
             # Open Alma configuration
-            self.browser.click(By.XPATH, '//button[@aria-label="Open Alma configuration"]')
-            self.browser.click(By.XPATH, '//a[@href="#CONF_MENU5"]')
+            self.browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+            self.browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
             self.browser.click(By.XPATH, '//*[text() = "Customize Letters"]')
 
         self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
@@ -330,7 +336,7 @@ class LetterTemplate(object):
         element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
         # Need to scroll a little bit more because of the fixed header
-        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-200)')
+        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-300)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
         element.click()
 
