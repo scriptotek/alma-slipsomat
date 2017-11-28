@@ -338,7 +338,10 @@ class LetterTemplate(object):
         # Need to scroll a little bit more because of the fixed header
         self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-400)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
-        element.click()
+        try:
+            element.click()
+        except:
+            element.send_keys(Keys.RETURN)  # works in some edge cases
 
     def console_msg(self, msg=''):
         sys.stdout.write('\r- {:60} {:40}'.format(
