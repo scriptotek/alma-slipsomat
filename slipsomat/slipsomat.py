@@ -294,17 +294,18 @@ class TemplateTable(object):
     def parse_rows(self):
         self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
 
-        elems = self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList .jsRecordContainer')
-        rows = []
         sys.stdout.write('Reading table... ')
         sys.stdout.flush()
-        for n, el in enumerate(elems):
-            sys.stdout.write('\rReading table... {}'.format(n))
-            sys.stdout.flush()
 
+        filenames = [el.text.replace('../', '') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(3) > a')]
+        dates = [el.text for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(7) > span')]
 
-            filename = el.find_element_by_id('SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename'.format(n)).text.replace('../', '')
-            modified = el.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(n)).text
+        if len(filenames) != len(dates):
+            raise RuntimeError('Table mismatch: %d filenames, %d dates' % (len(filenames), len(dates)))
+
+        rows = []
+        for n, filename in enumerate(filenames):
+            modified = dates[n]
             if filename not in self.status.letters:
                 self.status.letters[filename] = {}
             rows.append(LetterTemplate(table=self,
