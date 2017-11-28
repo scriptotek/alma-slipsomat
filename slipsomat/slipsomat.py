@@ -711,7 +711,10 @@ def test_XML(browser, filename):
         print("File not found:", path)
         return
 
+    browser.get('/mng/action/home.do')
+
     # Open Alma configuration
+    browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
     browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
     browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
     browser.click(By.XPATH, '//*[text() = "Notification Template"]')
