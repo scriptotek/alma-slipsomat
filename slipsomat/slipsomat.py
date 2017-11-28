@@ -158,7 +158,7 @@ class Browser(object):
         password = self.config.get('login', 'password')
 
         self.driver = self.get_driver()
-        self.driver.set_window_size(1000, 800)
+        self.driver.set_window_size(1400, 800)
         self.wait = self.waiter()
 
         print('Opening instance {}:{}'.format(self.instance, institution))
@@ -336,6 +336,7 @@ class LetterTemplate(object):
         element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
         # Need to scroll a little bit more because of the fixed header
+        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-400)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
         element.click()
 
