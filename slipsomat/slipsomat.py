@@ -336,9 +336,19 @@ class LetterTemplate(object):
         element = self.table.browser.driver.find_element(by, value)
         self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
         # Need to scroll a little bit more because of the fixed header
-        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-300)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
         element.click()
+
+    def console_msg(self, msg=''):
+        sys.stdout.write('\r- {:60} {:40}'.format(
+            self.filename.split('/')[-1] + ' (' + self.modified + ')',
+            msg
+        ))
+        sys.stdout.write('\r- {:60} {}'.format(
+            self.filename.split('/')[-1] + ' (' + self.modified + ')',
+            msg
+        ))
+        sys.stdout.flush()
 
     def view(self):
 
@@ -346,9 +356,9 @@ class LetterTemplate(object):
             # Check if we are already on the view page
             self.table.browser.driver.find_element_by_id('pageBeanfileContent')
         except NoSuchElementException:
-            # Otherwise, click the link
             self.scroll_into_view_and_click('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index), By.CSS_SELECTOR)
 
+            # Otherwise, click the link
         # Locate filename and content
         element = self.table.browser.wait_for(By.ID, 'pageBeanconfigFilefilename')
         filename = element.text.replace('../', '')
@@ -413,6 +423,7 @@ class LetterTemplate(object):
     def remote_modified(self):
         q = self.table.browser.driver.find_elements_by_id('TABLE_DATA_fileList')
         if len(q) == 0:
+            self.console_msg('opening table... ')
             self.table.open()
 
         today = datetime.now().strftime('%d/%m/%Y')
@@ -424,8 +435,7 @@ class LetterTemplate(object):
         if os.path.exists(self.filename) and self.modified == cached_modified and self.modified != today:
             return False
 
-        sys.stdout.write('checking... ')
-
+        self.console_msg('checking letter... ')
         self.view()
 
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
@@ -458,6 +468,8 @@ class LetterTemplate(object):
         return input("%s (y/N) " % msg).lower()[:1] == 'y'
 
     def pull(self):
+        self.console_msg('pulling letter...')
+
         self.view()
 
         if not os.path.exists(os.path.dirname(self.filename)):
@@ -583,22 +595,17 @@ def pull(browser):
 
     print('Checking all letters for changes...')
     for letter in table.rows:
-
-        sys.stdout.write('- {:60}'.format(
-            letter.filename.split('/')[-1] + ' (' + letter.modified + ')',
-        ))
-        sys.stdout.flush()
-
+        letter.console_msg()
         if letter.remote_modified():
             old_chk = letter.checksum
             letter.pull()
             if old_chk is None:
-                sys.stdout.write('fetched new letter @ {}'.format(letter.checksum[0:7]))
+                letter.console_msg('fetched new letter @ {}'.format(letter.checksum[0:7]))
             else:
-                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+                letter.console_msg('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
             fetched += 1
         else:
-            sys.stdout.write('no changes')
+            letter.console_msg('no changes')
 
         sys.stdout.write('\n')
 
