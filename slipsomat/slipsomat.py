@@ -36,13 +36,14 @@ import cmd
 import difflib
 from colorama import Fore
 
+histfile = '.slipsomat_history'
 try:
     import readline
     # Remove some standard delimiters like "/".
     readline.set_completer_delims(' \'"')
 except:
     # Windows?
-    pass
+    readline = None
 
 try:
     # Python 3
@@ -988,8 +989,16 @@ class Shell(cmd.Cmd, object):
             else:
                 sys.exit(0)
 
+    def preloop(self):
+        if readline is not None and os.path.exists(histfile):
+            readline.read_history_file(histfile)
+
     def execute(self, function, *args):
         "Executes the function, and handle exceptions"
+
+        if readline is not None:
+            readline.set_history_length(10000)
+            readline.write_history_file(histfile)
         try:
             function(self.browser, *args)
         except Exception as e:
