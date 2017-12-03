@@ -76,6 +76,7 @@ class Browser(object):
             cfg_file: Name of config file
         """
         self.driver = None
+        self._template_table = None
         self.config = self.read_config(cfg_file)
         self.instance = self.config.get('login', 'instance')
         self.default_timeout = default_timeout
@@ -105,6 +106,7 @@ class Browser(object):
     def restart(self):
         if "config" in vars(self):  # check for test mode
             self.close()
+            self._template_table = None
             self.connect()
 
     @staticmethod
@@ -207,6 +209,11 @@ class Browser(object):
     def get(self, url):
         return self.driver.get('https://{}.alma.exlibrisgroup.com/{}'.format(self.instance, url.lstrip('/')))
 
+    def get_template_table(self):
+        if self._template_table is None:
+            # Cache the template table to make subsequent pushes faster.
+            self._template_table = TemplateTable(self)
+        return self._template_table
 
 class LettersStatus(object):
 
@@ -275,6 +282,12 @@ class TemplateTable(object):
         self.status = LettersStatus(self)
         self.open()
         self.rows = self.parse_rows()
+
+    def get_letter(self, filename):
+        for letter in self.rows:
+            if letter.filename == filename:
+                return letter
+        raise ValueError('Filename not found in template table: %s' % filename)
 
     def open(self):
 
@@ -434,9 +447,8 @@ class LetterTemplate(object):
     def local_modified(self):
         content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
         current_chck = get_sha1(content)
-        stored_chk = self.table.status.letters[self.filename]['checksum']
 
-        return current_chck != stored_chk
+        return current_chck != self.checksum
 
     def remote_modified(self):
         q = self.table.browser.driver.find_elements_by_id('TABLE_DATA_fileList')
@@ -445,7 +457,7 @@ class LetterTemplate(object):
             self.table.open()
 
         today = datetime.now().strftime('%d/%m/%Y')
-        cached_modified = self.table.status.letters[self.filename].get('modified')
+        cached_modified = self.modified
 
         # If modification date has not changed from the cached modification date,
         # no modifications have occured. If the modification date is today, we cannot
@@ -467,17 +479,16 @@ class LetterTemplate(object):
     def _can_continue(self, txt, msg):
         # Compare text checksum with value in status.json
 
-        if not 'checksum' in self.table.status.letters[self.filename]:
+        if self.checksum is None:
             return True  # it's a new letter
 
-        local_chk = self.table.status.letters[self.filename]['checksum']
         txt = normalize_line_endings(txt)
         remote_chks = [
             get_sha1(txt),
             get_sha1(txt + "\n"),
         ]
 
-        if local_chk in remote_chks:
+        if self.checksum in remote_chks:
             return True
 
         print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
@@ -609,7 +620,7 @@ def pull(browser):
         browser: Browser object
     """
     fetched = 0
-    table = TemplateTable(browser)
+    table = browser.get_template_table()
 
     print('Checking all letters for changes...')
     for letter in table.rows:
@@ -640,7 +651,7 @@ def pull_defaults(browser):
         browser: Browser object
     """
     fetched = 0
-    table = TemplateTable(browser)
+    table = browser.get_template_table()
 
     print('Checking all letters...')
     for letter in table.rows:
@@ -676,7 +687,8 @@ def push(browser):
     Params:
         browser: Browser object
     """
-    table = TemplateTable(browser)
+    table = browser.get_template_table()
+    table.open()
 
     modified = []
     for letter in table.rows:
