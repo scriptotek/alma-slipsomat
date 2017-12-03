@@ -592,8 +592,8 @@ class LetterTemplate(object):
         try:
             ElementTree.fromstring(local_content.encode('utf-8'))
         except ElementTree.ParseError as e:
-            print('\n' + Back.RED + Fore.WHITE + 'XML file contains error and will be skipped: ' + self.filename + Style.RESET_ALL)
-            print(Back.RED + Fore.WHITE + ' > ' + str(e) + Style.RESET_ALL)
+            print('\n%sError: The file "%s" contains invalid XML:%s' % (Fore.RED, self.filename, Style.RESET_ALL))
+            print(Fore.RED + str(e) + Style.RESET_ALL)
             return False
 
         # Normalize line endings
@@ -764,6 +764,14 @@ def test_XML(browser, filename, languages='en'):
             print("File not found: %s" % source_path)
             return
 
+        local_content = open(source_path, 'rb').read()
+        try:
+            ElementTree.fromstring(local_content)
+        except ElementTree.ParseError as e:
+            print('%sError: The file "%s" contains invalid XML:%s' % (Fore.RED, os.path.basename(source_path), Style.RESET_ALL))
+            print(Fore.RED + str(e) + Style.RESET_ALL)
+            return
+
         source_path_root, source_path_ext = os.path.splitext(source_path)
 
         for m, lang in enumerate(languages):
@@ -830,6 +838,7 @@ def test_XML(browser, filename, languages='en'):
             time.sleep(1)
 
             # Take a screenshot
+            found_win = False
             for handle in browser.driver.window_handles:
                 browser.driver.switch_to_window(handle)
                 if 'beanContentParam=htmlContent' in browser.driver.current_url:
@@ -841,8 +850,11 @@ def test_XML(browser, filename, languages='en'):
                         print('Saved screenshot: %s' % png_path)
                     else:
                         print('Failed to save screenshot')
+                    found_win = True
                     break
 
+            if not found_win:
+                print(Fore.RED + 'ERROR: Failed to produce output!' + Fore.RESET)
             browser.driver.switch_to_window(cwh)
             tmp.close()
 
