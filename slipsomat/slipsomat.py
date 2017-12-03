@@ -19,6 +19,7 @@ import dateutil.parser
 import time
 import sys
 import re
+import shlex
 from glob import glob
 from textwrap import dedent
 from io import StringIO
@@ -31,6 +32,13 @@ import json
 import traceback
 from xml.etree import ElementTree
 import atexit
+try:
+    import readline
+    # Remove some standard delimiters like "/".
+    readline.set_completer_delims(' \'"')
+except:
+    # Windows?
+    pass
 
 try:
     # Python 3
@@ -680,7 +688,7 @@ def pull_defaults(browser):
     table.status.save()
 
 
-def push(browser):
+def push(browser, files):
     """
     Push locally modified files (letters whose local checksum does not match
     the value in status.json) to Alma, and update status.json with new checksums.
@@ -690,35 +698,38 @@ def push(browser):
     table = browser.get_template_table()
     table.open()
 
-    modified = []
-    for letter in table.rows:
-        if letter.local_modified():
-            modified.append(letter)
+    if len(files) == 0:
+        modified = []
+        for letter in table.rows:
+            if letter.local_modified():
+                modified.append(letter)
 
-    if len(modified) == 0:
-        sys.stdout.write(Fore.GREEN + 'No files contained local modifications.' + Style.RESET_ALL + '\n')
-    else:
+        if len(modified) == 0:
+            sys.stdout.write(Fore.GREEN + 'No files contained local modifications.' + Style.RESET_ALL + '\n')
+            return
+
         sys.stdout.write(Fore.GREEN + 'The following {} file(s) contains local modifications.'.format(len(modified)) + Style.RESET_ALL + '\n')
         for letter in modified:
             print(' - {}'.format(letter.filename))
+            files.append(letter.filename)
 
         msg = 'Push updates to Alma? '
         if input("%s (y/N) " % msg).lower() != 'y':
             print('Aborting')
-            return False
-        for letter in modified:
-            sys.stdout.write('- {:60}'.format(
-                letter.filename.split('/')[-1]
-            ))
-            sys.stdout.flush()
-            old_chk = letter.checksum
+            return
 
-            if letter.push():
-                if old_chk is None:
-                    sys.stdout.write('fetched new letter @ {}'.format(letter.checksum[0:7]))
-                else:
-                    sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
-                sys.stdout.write('\n')
+    for filename in files:
+        letter = table.get_letter(filename)
+
+        sys.stdout.write('- {:60}'.format(
+            letter.filename.split('/')[-1]
+        ))
+        sys.stdout.flush()
+        old_chk = letter.checksum
+
+        if letter.push():
+            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+            sys.stdout.write('\n')
 
 
 def test_XML(browser, filename, languages='en'):
@@ -855,22 +866,48 @@ class Shell(cmd.Cmd, object):
         "Pull in updates to default letters"
         self.execute(pull_defaults)
 
+    def help_push(self):
+        print(dedent("""
+        push
+
+            Push locally modified files to Alma. With no arguments specified, the
+            command will look for locally modified files and ask if you want to
+            push these.
+
+        push <filename>
+
+            Specify a filename relative to xsl/letters to only push a specific file.
+        """))
+
     def do_push(self, arg):
-        "Push locally modified files"
-        self.execute(push)
+        files = ['xsl/letters/%s' % filename for filename in shlex.split(arg)]
+        self.execute(push, files)
+
+    def complete_push(self, word, line, begin_idx, end_idx):
+        "Complete push arguments"
+        candidates = []
+        basedir = 'xsl/letters/'
+        for root, dirs, files in os.walk(basedir):
+            for file in files:
+                candidates.append(os.path.join(root[len(basedir):], file))
+        return [c for c in candidates if c.lower().startswith(word.lower())]
+
+    def help_test(self):
+        print(dedent("""
+        test <filename>@<lang>
+
+            Test letter output by uploading XML files in the 'test-data' folder to
+            the Alma Notification Template and storing screenshots of the resulting
+            output.
+
+        Parameters:
+            - <filename> can be either a single filename in the 'test-data' folder
+              or a glob pattern like '*.xml'
+            - <lang> can be either a single language code or multiple language codes
+              separated by comma. Defaults to "en" if not specified.
+        """))
 
     def do_test(self, arg):
-        """
-        test <filename>@<lang> : Run Alma 'notification template' test for an XML file
-        in the 'test-data' folder and store a screenshot in the 'screenshots' folder.
-        If <lang> is not set, it will default to 'en'.
-
-        Example: test ActivityLetter_TestUser1.xml@nb
-
-        Multiple languages can be tested in sequence:
-
-        Example: test ActivityLetter_TestUser1.xml@nb,nn,en
-        """
         self.execute(test_XML, *arg.split('@'))
 
     def complete_test(self, word, line, begin_idx, end_idx):
