@@ -19,6 +19,8 @@ import dateutil.parser
 import time
 import sys
 import re
+from textwrap import dedent
+from io import StringIO
 import getpass
 import hashlib
 import os.path
@@ -29,9 +31,11 @@ from xml.etree import ElementTree
 import atexit
 
 try:
-    import ConfigParser
+    # Python 3
+    from configparser import ConfigParser
 except Exception:
-    import configparser as ConfigParser  # python 3
+    # Python 2
+    from ConfigParser import ConfigParser
 
 try:
     input = raw_input  # Python 2
@@ -103,23 +107,26 @@ class Browser(object):
 
     @staticmethod
     def read_config(cfg_file):
-        config = ConfigParser.ConfigParser({'domain': ''})
+        config = ConfigParser()
+        defaults = StringIO(dedent(
+            u"""[login]
+
+            [selenium]
+            browser=firefox
+
+            [window]
+            width=1200
+            height=700
+            """
+        ))
+        config.read_file(defaults)
         config.read(cfg_file)
 
         if config.get('login', 'username') == '':
-            raise RuntimeError('No username configured')
+            raise RuntimeError('No username configured in slipsomat.cfg')
 
         if config.get('login', 'password') == '':
             config.set('login', 'password', getpass.getpass())
-
-        if not config.has_section('selenium'):
-            config.add_section('selenium')
-
-        if not config.has_section('selenium'):
-            config.add_section('selenium')
-
-        if not config.has_option('selenium', 'browser') or config.get('selenium', 'browser') == '':
-            config.set('selenium', 'browser', 'firefox')
 
         return config
 
@@ -158,7 +165,8 @@ class Browser(object):
         password = self.config.get('login', 'password')
 
         self.driver = self.get_driver()
-        self.driver.set_window_size(1400, 800)
+        self.driver.set_window_size(self.config.get('window', 'width'),
+                                    self.config.get('window', 'height'))
         self.wait = self.waiter()
 
         print('Opening instance {}:{}'.format(self.instance, institution))

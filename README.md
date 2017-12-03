@@ -29,6 +29,10 @@ password=
 
 [selenium]
 browser=firefox
+
+[window]
+width=1200
+height=700
 ```
 
 where you fill in the blank values.
