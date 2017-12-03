@@ -767,7 +767,8 @@ def test_XML(browser, filename, languages='en'):
 
         for m, lang in enumerate(languages):
 
-            screenshot_path = '%s_%s.png' % (source_path_root, lang)
+            png_path = '%s_%s.png' % (source_path_root, lang)
+            html_path = '%s_%s.html' % (source_path_root, lang)
 
             tmp = tempfile.NamedTemporaryFile('w+b')
             with open(source_path, 'rb') as op:
@@ -832,8 +833,11 @@ def test_XML(browser, filename, languages='en'):
                 browser.driver.switch_to_window(handle)
                 if 'beanContentParam=htmlContent' in browser.driver.current_url:
                     browser.driver.set_window_size(browser.config.get('screenshot', 'width'), 600)
-                    if browser.driver.save_screenshot(screenshot_path):
-                        print('Saved screenshot: %s' % screenshot_path)
+                    with open(html_path, 'w+b') as html_file:
+                        html_file.write(browser.driver.page_source.encode('utf-8'))
+                    print('Saved output: %s' % html_path)
+                    if browser.driver.save_screenshot(png_path):
+                        print('Saved screenshot: %s' % png_path)
                     else:
                         print('Failed to save screenshot')
                     break

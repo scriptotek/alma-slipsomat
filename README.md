@@ -125,8 +125,8 @@ Start `slipsomat` and run the command
     test filename.xml
 
 where `filename.xml` is a file in the "test-data" folder. This will upload the
-XML file to the Notification Template page and store a screenshot of the output
-in the "test-data" folder.
+XML file to the Notification Template page and store the resulting HTML output
+and a screenshot in the "test-data" folder.
 
 To test multiple files at the same time, you can use Unix style pathname pattern
 expansion ("globbing"). E.g. to test all XML files in the "test-data" folder, use the
