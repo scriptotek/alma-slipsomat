@@ -25,6 +25,7 @@ import getpass
 import hashlib
 import os.path
 import platform
+import tempfile
 import json
 import traceback
 from xml.etree import ElementTree
@@ -117,6 +118,9 @@ class Browser(object):
             [window]
             width=1200
             height=700
+
+            [screenshot]
+            width=1000
             """
         ))
         config.read_file(defaults)
@@ -704,7 +708,7 @@ def push(browser):
                 sys.stdout.write('\n')
 
 
-def test_XML(browser, filename):
+def test_XML(browser, filename, languages='en'):
     """
     Run a "notification template" test in Alma. An XML file is uploaded and processed
     Params:
@@ -713,40 +717,85 @@ def test_XML(browser, filename):
     """
     wait = browser.waiter()
 
-    print("Testing XML file:", filename)
-    path = os.path.abspath(os.path.join("test-data", filename))
-    if not os.path.isfile(path):
-        print("File not found:", path)
+    source_path = os.path.abspath(os.path.join('test-data', filename))
+    if not os.path.isfile(source_path):
+        print("File not found: %s" % source_path)
         return
 
-    browser.get('/mng/action/home.do')
+    filename_root, filename_ext = os.path.splitext(filename)
 
-    # Open Alma configuration
-    browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-    browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-    browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
-    browser.click(By.XPATH, '//*[text() = "Notification Template"]')
+    for lang in languages.split(','):
 
-    browser.wait_for(By.ID, 'cbuttonupload')
+        screenshot_path = os.path.abspath(os.path.join('screenshots', '%s_%s.png' % (filename_root, lang)))
+        if not os.path.exists(os.path.dirname(screenshot_path)):
+            os.mkdir(os.path.dirname(screenshot_path))
 
-    # Upload the XML
-    file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
-    file_field.send_keys(path)
+        tmp = tempfile.NamedTemporaryFile('w+b')
+        with open(source_path, 'rb') as op:
+            tmp.write(re.sub('<preferred_language>[a-z]+</preferred_language>',
+                             '<preferred_language>%s</preferred_language>' % lang,
+                             op.read().decode('utf-8')).encode('utf-8'))
+        tmp.flush()
 
-    upload_btn = browser.driver.find_element_by_id('cbuttonupload')
-    upload_btn.click()
+        try:
+            element = browser.driver.find_element_by_id('cbuttonupload')
+        except NoSuchElementException:
+            browser.get('/mng/action/home.do')
 
-    browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
+            # Open Alma configuration
+            browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+            browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+            browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
+            browser.click(By.XPATH, '//*[text() = "Notification Template"]')
 
-    run_btn = wait.until(
-        EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
-    )
+            browser.wait_for(By.ID, 'cbuttonupload')
 
-    # Clicking the button right away caused the screen to hang on the spinner,
-    # so we add a small sleep.
-    # time.sleep(1)
+        # Set language
+        element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage')
+        element.click()
+        element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
+        select = Select(element)
+        opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
+        longLangName = opts[lang]
+        print('Testing "%s" using language "%s"' % (filename, longLangName))
 
-    run_btn.click()
+        element = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
+        ))
+        element.click()
+
+
+        # Upload the XML
+        file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
+        file_field.send_keys(tmp.name)
+
+        upload_btn = browser.driver.find_element_by_id('cbuttonupload')
+        upload_btn.click()
+
+        browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
+
+        run_btn = wait.until(
+            EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
+        )
+
+        cwh = browser.driver.current_window_handle
+
+        run_btn.click()
+        time.sleep(1)
+
+        # Take a screenshot
+        for handle in browser.driver.window_handles:
+            browser.driver.switch_to_window(handle)
+            if 'beanContentParam=htmlContent' in browser.driver.current_url:
+                browser.driver.set_window_size(browser.config.get('screenshot', 'width'), 600)
+                if browser.driver.save_screenshot(screenshot_path):
+                    print('Saved screenshot: %s' % screenshot_path)
+                else:
+                    print('Failed to save screenshot')
+                break
+
+        browser.driver.switch_to_window(cwh)
+        tmp.close()
 
 
 import cmd
@@ -791,8 +840,18 @@ class Shell(cmd.Cmd, object):
         self.execute(push)
 
     def do_test(self, arg):
-        "test filename : Run Alma 'notification template' test, using given XML file"
-        self.execute(test_XML, arg)
+        """
+        test <filename>@<lang> : Run Alma 'notification template' test for an XML file
+        in the 'test-data' folder and store a screenshot in the 'screenshots' folder.
+        If <lang> is not set, it will default to 'en'.
+
+        Example: test ActivityLetter_TestUser1.xml@nb
+
+        Multiple languages can be tested in sequence:
+
+        Example: test ActivityLetter_TestUser1.xml@nb,nn,en
+        """
+        self.execute(test_XML, *arg.split('@'))
 
     def complete_test(self, word, line, begin_idx, end_idx):
         "Complete test arguments"

@@ -108,6 +108,35 @@ The shell has a command history, and tab completion. For example `test Ful<tab><
   be checked as Alma provides no information whatsoever on when the default
   letters were last updated.
 
+
+### Testing the output of a letter
+
+Alma lets you test the output on the Notification Template page, but doing this
+manually each time is boring, so slipsomat provides you with the `test` command
+to automate that.
+
+Create a folder called "test-data" in the same folder as the `slipsomat.cfg` file.
+Add one or more XML files you want to test there.
+
+Start `slipsomat` and run the command
+
+    test filename.xml
+
+where `filename.xml` is a file in the "test-data" folder. This will upload the
+XML file to the Notification Template page and store a screenshot of the output
+in the "screenshots" folder (if it doesn't exist, it is created).
+
+By default, the command will use English as the letter language. To test
+another language, just append `@` and the language code to the filename.
+Example:
+
+    test filename.xml@nn
+
+You can even test multple languages in one go by specifying multiple language
+codes separated by comma like so:
+
+    test filename.xml@en,nb,nn
+
 ## See also
 
 * [open issues](https://github.com/scriptotek/alma-slipsomat/issues)
