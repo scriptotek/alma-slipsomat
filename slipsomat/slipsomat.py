@@ -797,7 +797,7 @@ class Shell(cmd.Cmd, object):
     def complete_test(self, word, line, begin_idx, end_idx):
         "Complete test arguments"
         files = os.listdir("test-data")
-        return [file for file in files if file.startswith(word)]
+        return [file for file in files if file.lower().startswith(word.lower())]
 
     # Aliases
     do_EOF = do_exit  # ctrl-d
