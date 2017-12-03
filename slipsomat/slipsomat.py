@@ -19,6 +19,7 @@ import dateutil.parser
 import time
 import sys
 import re
+from glob import glob
 from textwrap import dedent
 from io import StringIO
 import getpass
@@ -717,85 +718,92 @@ def test_XML(browser, filename, languages='en'):
     """
     wait = browser.waiter()
 
-    source_path = os.path.abspath(os.path.join('test-data', filename))
-    if not os.path.isfile(source_path):
-        print("File not found: %s" % source_path)
-        return
+    source_files = glob(os.path.abspath(os.path.join('test-data', filename)))
+    languages = languages.split(',')
 
-    filename_root, filename_ext = os.path.splitext(filename)
+    for n, source_path in enumerate(source_files):
 
-    for lang in languages.split(','):
+        if not os.path.isfile(source_path):
+            print("File not found: %s" % source_path)
+            return
 
-        screenshot_path = os.path.abspath(os.path.join('screenshots', '%s_%s.png' % (filename_root, lang)))
-        if not os.path.exists(os.path.dirname(screenshot_path)):
-            os.mkdir(os.path.dirname(screenshot_path))
+        source_path_root, source_path_ext = os.path.splitext(source_path)
 
-        tmp = tempfile.NamedTemporaryFile('w+b')
-        with open(source_path, 'rb') as op:
-            tmp.write(re.sub('<preferred_language>[a-z]+</preferred_language>',
-                             '<preferred_language>%s</preferred_language>' % lang,
-                             op.read().decode('utf-8')).encode('utf-8'))
-        tmp.flush()
+        for m, lang in enumerate(languages):
 
-        try:
-            element = browser.driver.find_element_by_id('cbuttonupload')
-        except NoSuchElementException:
-            browser.get('/mng/action/home.do')
+            screenshot_path = '%s_%s.png' % (source_path_root, lang)
 
-            # Open Alma configuration
-            browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-            browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-            browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
-            browser.click(By.XPATH, '//*[text() = "Notification Template"]')
+            tmp = tempfile.NamedTemporaryFile('w+b')
+            with open(source_path, 'rb') as op:
+                tmp.write(re.sub('<preferred_language>[a-z]+</preferred_language>',
+                                 '<preferred_language>%s</preferred_language>' % lang,
+                                 op.read().decode('utf-8')).encode('utf-8'))
+            tmp.flush()
 
-            browser.wait_for(By.ID, 'cbuttonupload')
+            try:
+                element = browser.driver.find_element_by_id('cbuttonupload')
+            except NoSuchElementException:
+                browser.get('/mng/action/home.do')
 
-        # Set language
-        element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage')
-        element.click()
-        element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
-        select = Select(element)
-        opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
-        longLangName = opts[lang]
-        print('Testing "%s" using language "%s"' % (filename, longLangName))
+                # Open Alma configuration
+                browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+                browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
+                browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
+                browser.click(By.XPATH, '//*[text() = "Notification Template"]')
 
-        element = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
-        ))
-        element.click()
+                browser.wait_for(By.ID, 'cbuttonupload')
+
+            # Set language
+            element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage')
+            element.click()
+            element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
+            select = Select(element)
+            opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
+            longLangName = opts[lang]
+
+            cur = n * len(languages) + m + 1
+            tot = len(languages) * len(source_files)
+            print('[%d/%d] Testing "%s" using language "%s"' % (cur, tot,
+                                                                os.path.basename(source_path),
+                                                                longLangName))
+
+            element = wait.until(EC.element_to_be_clickable(
+                (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
+            ))
+            element.click()
 
 
-        # Upload the XML
-        file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
-        file_field.send_keys(tmp.name)
+            # Upload the XML
+            file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
+            file_field.send_keys(tmp.name)
 
-        upload_btn = browser.driver.find_element_by_id('cbuttonupload')
-        upload_btn.click()
+            upload_btn = browser.driver.find_element_by_id('cbuttonupload')
+            upload_btn.click()
 
-        browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
+            browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
 
-        run_btn = wait.until(
-            EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
-        )
+            run_btn = wait.until(
+                EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
+            )
 
-        cwh = browser.driver.current_window_handle
+            cwh = browser.driver.current_window_handle
 
-        run_btn.click()
-        time.sleep(1)
+            run_btn.click()
+            time.sleep(1)
 
-        # Take a screenshot
-        for handle in browser.driver.window_handles:
-            browser.driver.switch_to_window(handle)
-            if 'beanContentParam=htmlContent' in browser.driver.current_url:
-                browser.driver.set_window_size(browser.config.get('screenshot', 'width'), 600)
-                if browser.driver.save_screenshot(screenshot_path):
-                    print('Saved screenshot: %s' % screenshot_path)
-                else:
-                    print('Failed to save screenshot')
-                break
+            # Take a screenshot
+            for handle in browser.driver.window_handles:
+                browser.driver.switch_to_window(handle)
+                if 'beanContentParam=htmlContent' in browser.driver.current_url:
+                    browser.driver.set_window_size(browser.config.get('screenshot', 'width'), 600)
+                    if browser.driver.save_screenshot(screenshot_path):
+                        print('Saved screenshot: %s' % screenshot_path)
+                    else:
+                        print('Failed to save screenshot')
+                    break
 
-        browser.driver.switch_to_window(cwh)
-        tmp.close()
+            browser.driver.switch_to_window(cwh)
+            tmp.close()
 
 
 import cmd

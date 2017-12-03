@@ -126,7 +126,13 @@ Start `slipsomat` and run the command
 
 where `filename.xml` is a file in the "test-data" folder. This will upload the
 XML file to the Notification Template page and store a screenshot of the output
-in the "screenshots" folder (if it doesn't exist, it is created).
+in the "test-data" folder.
+
+To test multiple files at the same time, you can use Unix style pathname pattern
+expansion ("globbing"). E.g. to test all XML files in the "test-data" folder, use the
+`*` wildcard character:
+
+    test *.xml
 
 By default, the command will use English as the letter language. To test
 another language, just append `@` and the language code to the filename.
@@ -137,7 +143,12 @@ Example:
 You can even test multple languages in one go by specifying multiple language
 codes separated by comma like so:
 
-    test filename.xml@en,nb,nn
+    test filename.xml@en,no,nn
+
+This can also be used in combination with globbing. To test all XML files in the
+"test-data" folder in three languages:
+
+    test *.xml@en,no,nn
 
 ## See also
 
