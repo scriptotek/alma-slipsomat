@@ -32,6 +32,10 @@ import json
 import traceback
 from xml.etree import ElementTree
 import atexit
+import cmd
+import difflib
+from colorama import Fore
+
 try:
     import readline
     # Remove some standard delimiters like "/".
@@ -484,25 +488,32 @@ class LetterTemplate(object):
 
         return old_sha1 != new_sha1
 
-    def _can_continue(self, txt, msg):
+    def _can_continue(self, local_txt, remote_txt, msg):
         # Compare text checksum with value in status.json
 
         if self.checksum is None:
             return True  # it's a new letter
 
-        txt = normalize_line_endings(txt)
+        local_txt = normalize_line_endings(local_txt)
         remote_chks = [
-            get_sha1(txt),
-            get_sha1(txt + "\n"),
+            get_sha1(local_txt),
+            get_sha1(local_txt + "\n"),
         ]
 
         if self.checksum in remote_chks:
             return True
 
         print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
-        # @TODO: Show diff here?
-        msg = 'Continue {}? '.format(self.filename)
-        return input("%s (y/N) " % msg).lower()[:1] == 'y'
+        msg = 'Continue with {}?'.format(self.filename)
+        if remote_txt is None:
+            return input("%s [y: yes, n: no] " % msg).lower()[:1] == 'y'
+        else:
+            while True:
+                response = input("%s [y: yes, n: no, d: diff] " % msg).lower()[:1]
+                if response == 'd':
+                    show_diff(remote_txt, local_txt)
+                else:
+                    return response == 'y'
 
     def pull(self):
         self.console_msg('pulling letter...')
@@ -517,7 +528,7 @@ class LetterTemplate(object):
             with open(self.filename, 'rb') as f:
                 local_content = f.read().decode('utf-8')
 
-            if not self._can_continue(local_content, 'Conflict: Trying to pull in a file modified remotely in Alma, but the local file also seems to have changes (checksum does not match the value in status.json). If you continue, the local changes will be overwritten. You might want to make a backup of the file first.'):
+            if not self._can_continue(local_content, None, 'Conflict: Trying to pull in a file modified remotely in Alma, but the local file also seems to have changes (checksum does not match the value in status.json). If you continue, the local changes will be overwritten. You might want to make a backup of the file first.'):
                 print('Skipping')
                 self.table.open()
                 return False
@@ -584,7 +595,6 @@ class LetterTemplate(object):
             print(Back.RED + Fore.WHITE + ' > ' + str(e) + Style.RESET_ALL)
             return False
 
-
         # Normalize line endings
         local_content = normalize_line_endings(local_content)
 
@@ -592,7 +602,10 @@ class LetterTemplate(object):
         txtarea = self.edit()
 
         # Verify text checksum against local checksum
-        if not self._can_continue(txtarea.text, 'The checksum of the remote file does not match the value in status.json. It might have been modified directly in Alma.'):
+
+        show_diff(txtarea.text, local_content)
+
+        if not self._can_continue(local_content, txtarea.text, 'The checksum of the remote file does not match the value in status.json. It might have been modified directly in Alma.'):
             print('Skipping')
             self.table.open()
             return False
@@ -829,7 +842,25 @@ def test_XML(browser, filename, languages='en'):
             tmp.close()
 
 
-import cmd
+def color_diff(diff):
+    for line in diff:
+        if line.startswith('+'):
+            yield Fore.GREEN + line + Fore.RESET
+        elif line.startswith('-'):
+            yield Fore.RED + line + Fore.RESET
+        elif line.startswith('^'):
+            yield Fore.BLUE + line + Fore.RESET
+        else:
+            yield line
+
+
+def show_diff(src, dst):
+    src = src.strip().splitlines()
+    dst = dst.strip().splitlines()
+
+    print()
+    for line in color_diff(difflib.unified_diff(src, dst, fromfile='Local', tofile='Alma')):
+        print(line)
 
 
 class Shell(cmd.Cmd, object):
