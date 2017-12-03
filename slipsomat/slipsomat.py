@@ -884,6 +884,14 @@ class Shell(cmd.Cmd, object):
         super(Shell, self).__init__()
         self.browser = browser
 
+    @staticmethod
+    def completion_helper(basedir, word):
+        candidates = []
+        for root, dirs, files in os.walk(basedir):
+            for file in files:
+                candidates.append(os.path.join(root[len(basedir):], file))
+        return [c for c in candidates if c.lower().startswith(word.lower())]
+
     def emptyline(self):
         "handle empty lines"
         pass
@@ -920,12 +928,7 @@ class Shell(cmd.Cmd, object):
 
     def complete_push(self, word, line, begin_idx, end_idx):
         "Complete push arguments"
-        candidates = []
-        basedir = 'xsl/letters/'
-        for root, dirs, files in os.walk(basedir):
-            for file in files:
-                candidates.append(os.path.join(root[len(basedir):], file))
-        return [c for c in candidates if c.lower().startswith(word.lower())]
+        return self.completion_helper('xsl/letters/', word)
 
     def help_test(self):
         print(dedent("""
@@ -947,8 +950,7 @@ class Shell(cmd.Cmd, object):
 
     def complete_test(self, word, line, begin_idx, end_idx):
         "Complete test arguments"
-        files = os.listdir("test-data")
-        return [file for file in files if file.lower().startswith(word.lower())]
+        return self.completion_helper('test-data/', word)
 
     # Aliases
     do_EOF = do_exit  # ctrl-d
