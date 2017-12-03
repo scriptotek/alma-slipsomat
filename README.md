@@ -3,7 +3,7 @@ This repo contains our `slipsomat` script for pulling and pushing files to Alma
 using Selenium browser automation. The script computes and stores checksums of
 all the letters to protect you from overwriting the work of others.
 
-Huh?!? Using something like Selenium for synchronizing files might seem like a
+Using something like Selenium for synchronizing files might seem like a
 rather silly approach. It is! It works… sort-of, but we'd much prefer that
 Ex Libris implemented a proper protocol we could use, so please go and vote for
 [this idea](http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/12471084-synchronizing-xsl-templates-with-external-systems) on Ideas
@@ -50,9 +50,11 @@ where you fill in the blank values.
   is the recommended solution, since the password is stored in plain text.
 * `browser` can be set to `firefox`, `chrome` or `phantomjs`. The corresponding
   driver must be installed (GeckoDriver for Firefox, ChromeDriver for Chrome).
-  I've not had so much success with PhantomJS, but both Firefox and Chrome works
-  well most of the time, but browser updates sometimes cause Selenium to crash.
-  Updating both Selenium and the driver(s) often help in that case.
+  I've had success with all three browsers, but from time to time a browser can
+  start crashing or freezing at some point. First thing to try then is to upgrade
+  both Selenium and the browser driver. If there's still problems, switch to
+  another browser for some time. If *that* doesn't help, there might be an issue
+  with slipsomat. Please file an issue.
 
 ## Debugging
 
