@@ -414,7 +414,7 @@ class LetterTemplate(object):
 
     def is_customized(self):
         updatedBy = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_cfgFileupdatedBy'.format(self.index))
-        return updatedBy.text != '-'
+        return updatedBy.text not in ('-', 'Network')
 
     def view_default(self):
 
