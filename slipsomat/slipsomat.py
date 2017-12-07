@@ -94,10 +94,14 @@ class Browser(object):
         self.instance = self.config.get('login', 'instance')
         self.default_timeout = default_timeout
 
-    def waiter(self):
-        return WebDriverWait(self.driver, self.default_timeout)
+    def waiter(self, timeout=None):
+        if timeout is None:
+            timeout = self.default_timeout
+        return WebDriverWait(self.driver, timeout)
 
-    def wait_for(self, by, by_value):
+    def wait_for(self, by, by_value, timeout=None):
+        if timeout is not None:
+            return self.waiter(timeout).until(EC.visibility_of_element_located((by, by_value)))
         return self.wait.until(EC.visibility_of_element_located((by, by_value)))
 
     def send_keys(self, by, by_value, text):
@@ -213,7 +217,7 @@ class Browser(object):
 
         try:
             # Look for some known element on the Alma main screen
-            self.wait_for(By.CSS_SELECTOR, '.logoAlma')
+            self.wait_for(By.CSS_SELECTOR, '.logoAlma', 30)
         except NoSuchElementException:
             raise Exception('Failed to login to Alma')
 
