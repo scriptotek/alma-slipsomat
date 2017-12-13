@@ -5,6 +5,7 @@ from __future__ import print_function
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.remote.errorhandler import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -432,28 +433,44 @@ class LetterTemplate(object):
         assert filename == self.filename, "%r != %r" % (filename, self.filename)
 
     def edit(self):
+        self.console_msg('opening...')
 
         el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
         if len(el) != 0 and not el.is_enabled():
+            # Go back to table
             self.table.open()
 
-        el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
-        if len(el) == 0:
+        def open_letter_from_menu():
+            el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
+            if len(el) == 0:
+                time.sleep(0.2)
 
-            # To avoid
-            #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
-            #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
-            self.scroll_into_view_and_click('#input_fileList_{}'.format(self.index), By.CSS_SELECTOR)
+                # To avoid
+                #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
+                #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
+                self.scroll_into_view_and_click('#input_fileList_{}'.format(self.index), By.CSS_SELECTOR)
+                time.sleep(0.2)
 
-            editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(self.index)
-            editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
-            if len(editBtn) != 0:
-                self.scroll_into_view_and_click(editBtnSelector, By.CSS_SELECTOR)
-            else:
-                customizeBtnSelector = '#ROW_ACTION_LI_fileList_{} a'.format(self.index)
-                self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
+                # Edit letter that is already customized
+                editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(self.index)
+                editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
+                if len(editBtn) != 0:
+                    self.console_msg('editing...')
+                    self.scroll_into_view_and_click(editBtnSelector, By.CSS_SELECTOR)
+                else:
+                    # Customize letter
+                    self.console_msg('customizing...')
+                    customizeBtnSelector = '#ROW_ACTION_fileList_{} a'.format(self.index)
+                    self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
 
-        element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        try:
+            open_letter_from_menu()
+            element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        except TimeoutException:
+            self.console_msg('retrying...')
+            open_letter_from_menu()
+            element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+
         filename = element.text.replace('../', '')
         txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
 
@@ -499,22 +516,27 @@ class LetterTemplate(object):
         if self.checksum is None:
             return True  # it's a new letter
 
-        local_txt = normalize_line_endings(local_txt)
+        if remote_txt is not None and normalize_line_endings(remote_txt) == normalize_line_endings(local_txt):
+            self.console_msg(Fore.GREEN + 'no changes' + Style.RESET_ALL)
+            return False
+
+        remote_txt = normalize_line_endings(remote_txt)
         remote_chks = [
-            get_sha1(local_txt),
-            get_sha1(local_txt + "\n"),
+            get_sha1(remote_txt),
+            get_sha1(remote_txt + "\n"),
         ]
 
         if self.checksum in remote_chks:
             return True
 
-        print('\n' + Back.RED + Fore.WHITE + msg + Style.RESET_ALL)
+        print()
+        print('\n' + Back.RED + Fore.WHITE + '\n\n  Warning: ' + msg % {'local_sha': self.checksum[:8], 'remote_sha': get_sha1(remote_txt)[:8]} + '\n' + Style.RESET_ALL)
         msg = 'Continue with {}?'.format(self.filename)
         if remote_txt is None:
             return input("%s [y: yes, n: no] " % msg).lower()[:1] == 'y'
         else:
             while True:
-                response = input("%s [y: yes, n: no, d: diff] " % msg).lower()[:1]
+                response = input(Fore.CYAN + "%s [y: yes, n: no, d: diff] " % msg + Style.RESET_ALL).lower()[:1]
                 if response == 'd':
                     show_diff(remote_txt, local_txt)
                 else:
@@ -588,6 +610,7 @@ class LetterTemplate(object):
         self.table.browser.driver.execute_script('document.getElementById("' + id + '").value = "' + value + '";')
 
     def push(self):
+        self.console_msg('opening')
 
         # Get new text
         local_content = open(self.filename, 'rb').read().decode('utf-8')
@@ -608,12 +631,18 @@ class LetterTemplate(object):
 
         # Verify text checksum against local checksum
 
+        self.console_msg('checking...')
         show_diff(txtarea.text, local_content)
 
-        if not self._can_continue(local_content, txtarea.text, 'The checksum of the remote file does not match the value in status.json. It might have been modified directly in Alma.'):
+        if not self._can_continue(local_content, txtarea.text,
+                'The checksum of the remote file (%(remote_sha)s) does not match the local value in\n' +
+                '  status.json (%(local_sha)s), meaning it might have been modified directly in Alma.\n' +
+                '  Please review the diff below.'):
             print('Skipping')
             self.table.open()
             return False
+
+        self.console_msg('saving...')
 
         # Send new text to text area
         self.set_text(txtarea.get_attribute('id'), local_content)
@@ -739,14 +768,9 @@ def push(browser, files):
     for filename in files:
         letter = table.get_letter(filename)
 
-        sys.stdout.write('- {:60}'.format(
-            letter.filename.split('/')[-1]
-        ))
-        sys.stdout.flush()
         old_chk = letter.checksum
-
         if letter.push():
-            sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
+            letter.console_msg('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
             sys.stdout.write('\n')
 
 
@@ -889,7 +913,7 @@ class Shell(cmd.Cmd, object):
     Interactive shell for parsing commands
     """
     intro = 'Welcome to the slipsomat. Type help or ? to list commands.\n'
-    prompt = "slipsomat> "
+    prompt = Fore.CYAN + "slipsomat> " + Style.RESET_ALL
     file = None
 
     def __init__(self, browser):
