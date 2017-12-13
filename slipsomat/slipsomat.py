@@ -786,6 +786,9 @@ def test_XML(browser, filename, languages='en'):
     source_files = glob(os.path.abspath(os.path.join('test-data', filename)))
     languages = languages.split(',')
 
+    if len(source_files) == 0:
+        print('Error: No such file')
+
     for n, source_path in enumerate(source_files):
 
         if not os.path.isfile(source_path):
