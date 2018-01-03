@@ -520,17 +520,29 @@ class LetterTemplate(object):
             self.console_msg(Fore.GREEN + 'no changes' + Style.RESET_ALL)
             return False
 
-        remote_txt = normalize_line_endings(remote_txt)
-        remote_chks = [
-            get_sha1(remote_txt),
-            get_sha1(remote_txt + "\n"),
-        ]
+        opts = {
+            'local_sha': self.checksum[:8],
+            'fs_sha': get_sha1(normalize_line_endings(local_txt))[:8]
+        }
 
-        if self.checksum in remote_chks:
-            return True
+        if remote_txt is None:
+            if opts['local_sha'] == opts['fs_sha']:
+                return True
+
+        else:
+            remote_txt = normalize_line_endings(remote_txt)
+            remote_chks = [
+                get_sha1(remote_txt),
+                get_sha1(remote_txt + "\n"),
+            ]
+
+            if self.checksum in remote_chks:
+                return True
+            opts['remote_sha'] = get_sha1(remote_txt)[:8]
 
         print()
-        print('\n' + Back.RED + Fore.WHITE + '\n\n  Warning: ' + msg % {'local_sha': self.checksum[:8], 'remote_sha': get_sha1(remote_txt)[:8]} + '\n' + Style.RESET_ALL)
+        print('\n' + Back.RED + Fore.WHITE + '\n\n  Warning: ' + msg % opts + '\n' + Style.RESET_ALL)
+
         msg = 'Continue with {}?'.format(self.filename)
         if remote_txt is None:
             return input("%s [y: yes, n: no] " % msg).lower()[:1] == 'y'
@@ -550,18 +562,21 @@ class LetterTemplate(object):
         if not os.path.exists(os.path.dirname(self.filename)):
             os.makedirs(os.path.dirname(self.filename))
 
+        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
+        remote_content = normalize_line_endings(txtarea.text)
+
         # Verify text checksum against local checksum
         if os.path.isfile(self.filename):
             with open(self.filename, 'rb') as f:
                 local_content = f.read().decode('utf-8')
 
-            if not self._can_continue(local_content, None, 'Conflict: Trying to pull in a file modified remotely in Alma, but the local file also seems to have changes (checksum does not match the value in status.json). If you continue, the local changes will be overwritten. You might want to make a backup of the file first.'):
+            if not self._can_continue(local_content, None,
+                    'Conflict: Trying to pull in a file modified remotely in Alma, but the local file\n' +
+                    '  also seems to have changes. If you continue, the local changes will be overwritten.'
+                    '  Checksum of the local file (%(fs_sha)s) does not match the value in status.sjon (%(local_sha)s)'):
                 print('Skipping')
                 self.table.open()
                 return False
-
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        remote_content = normalize_line_endings(txtarea.text)
 
         with open(self.filename, 'wb') as f:
             f.write(remote_content.encode('utf-8'))
