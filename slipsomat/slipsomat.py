@@ -1020,7 +1020,7 @@ class Shell(cmd.Cmd, object):
         print("\nException:", e)
         traceback.print_exc(file=sys.stdout)
 
-        if inquirer is None:
+        if inquirer is None or not hasattr(inquirer, 'List'):
             print('Please "pip install inquirer" if you would like more debug options')
             sys.exit(0)
         else:
