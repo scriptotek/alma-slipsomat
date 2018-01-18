@@ -373,7 +373,6 @@ class TemplateTable(object):
                                        checksum=self.status.letters[filename].get('checksum'),
                                        default_checksum=self.status.letters[filename].get('default_checksum')
                                        ))
-            self.status.letters[filename]['remote_date'] = modified
         sys.stdout.write('\rReading table... DONE\n')
 
         return rows
@@ -505,12 +504,12 @@ class LetterTemplate(object):
             self.table.open()
 
         today = datetime.now().strftime('%d/%m/%Y')
-        cached_modified = self.modified
 
         # If modification date has not changed from the cached modification date,
         # no modifications have occured. If the modification date is today, we cannot
         # be sure, since there is no time information, just date.
-        if os.path.exists(self.filename) and self.modified == cached_modified and self.modified != today:
+
+        if os.path.exists(self.filename) and self.modified == self.table.status.letters[self.filename]['modified'] and self.modified != today:
             return False
 
         self.console_msg('checking letter... ')
