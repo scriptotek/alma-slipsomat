@@ -196,10 +196,23 @@ class Browser(object):
 
         print('Opening instance {}:{}'.format(self.instance, institution))
 
-        self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
-
-        if auth_type == 'SAML' and domain != '':
+        if auth_type == 'Feide' and domain != '':
             print('Logging in as {}@{}'.format(username, domain))
+
+            self.get('/mng/login?institute={}&auth=SAML'.format(institution))
+
+            element = self.wait.until(EC.visibility_of_element_located((By.ID, 'org_selector-selectized')))
+            element.click()
+
+            element = self.wait.until(EC.visibility_of_element_located((By.XPATH, '//div[@data-value="%s"]' % domain)))
+            element.click()
+
+            element = self.driver.find_element_by_id('selectorg_button')
+            element.click()
+
+        elif auth_type == 'SAML' and domain != '':
+            print('Logging in as {}@{}'.format(username, domain))
+            self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
             element = self.wait.until(EC.visibility_of_element_located((By.ID, 'org')))
             select = Select(element)
@@ -211,6 +224,7 @@ class Browser(object):
             # http://stackoverflow.com/questions/833032/submit-is-not-a-function-error-in-javascript
         else:
             print('Logging in as {}'.format(username))
+            self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
         self.send_keys(By.ID, 'username', username)
         element = self.send_keys(By.ID, 'password', password)

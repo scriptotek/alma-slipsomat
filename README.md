@@ -20,7 +20,7 @@ file. To get started with your own files, you can create an empty directory with
 
 ```
 [login]
-auth_type=SAML
+auth_type=
 domain=
 instance=
 institution=
@@ -37,8 +37,10 @@ height=700
 
 where you fill in the blank values.
 
-* `auth_type=SAML` means you authenticate using a SAML provider such as Feide
-  or Shibboleth. Set it to `auth_type=basic` to use the standard Alma login.
+* Set `auth_type=Feide` if you authenticate using Feide SAML. Set `auth_type=SAML`
+  for Shibboleth or other SAML providers (submit an issue if it doesn't work with
+  your provider!).
+  Set `auth_type=basic` to use the standard Alma login.
 * `domain` is your Feide domain, e.g. `uio.no`. If you don't use Feide as your
   SAML provider, you can leave this empty.
 * `instance` is the Alma instance name, which is the first part of your ALMA URL.
