@@ -944,7 +944,7 @@ class Shell(cmd.Cmd, object):
     Interactive shell for parsing commands
     """
     intro = 'Welcome to the slipsomat. Type help or ? to list commands.\n'
-    prompt = Fore.CYAN + "slipsomat> " + Style.RESET_ALL
+    prompt = "slipsomat> "
     file = None
 
     def __init__(self, browser):
