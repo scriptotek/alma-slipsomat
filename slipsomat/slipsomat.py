@@ -355,8 +355,13 @@ class TemplateTable(object):
         sys.stdout.write('Reading table... ')
         sys.stdout.flush()
 
-        filenames = [el.text.replace('../', '') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(3) > a')]
-        dates = [el.text for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(7) > span')]
+        column_headers = [el.get_attribute('id') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > th')]
+
+        filename_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename')
+        update_date_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate')
+
+        filenames = [el.text.replace('../', '') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % (filename_column_idx + 1))]
+        dates = [el.text for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % (update_date_column_idx + 1))]
 
         if len(filenames) != len(dates):
             raise RuntimeError('Table mismatch: %d filenames, %d dates' % (len(filenames), len(dates)))
