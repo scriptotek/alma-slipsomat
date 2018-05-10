@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding=utf-8
 from __future__ import print_function
-import os
+from os import path
 import sys
 
 try:
@@ -10,13 +10,17 @@ except ImportError:
     print("This package requires 'setuptools' to be installed.")
     sys.exit(1)
 
-here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.md')).read()
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.md')) as fp:
+    long_description = fp.read()
 
 setup(name='slipsomat',
       version='0.2.1',  # Use bumpversion to update
       description='Sync Alma slips & letters',
-      long_description=README,
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       classifiers=[
           'Programming Language :: Python',
           'Programming Language :: Python :: 2.7',
