@@ -14,7 +14,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
 
 setup(name='slipsomat',
-      version='0.2.0',  # Use bumpversion to update
+      version='0.2.1',  # Use bumpversion to update
       description='Sync Alma slips & letters',
       long_description=README,
       classifiers=[
