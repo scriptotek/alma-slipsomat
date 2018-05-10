@@ -41,6 +41,9 @@ class Worker(object):
             timeout = self.default_timeout
         return WebDriverWait(self.driver, timeout)
 
+    def find(self, by, by_value):
+        return self.driver.find_element(by, by_value)
+
     def wait_for(self, by, by_value, timeout=None):
         if timeout is not None:
             return self.waiter(timeout).until(EC.visibility_of_element_located((by, by_value)))
@@ -62,7 +65,7 @@ class Worker(object):
 
     def scroll_into_view_and_click(self, value, by=By.ID):
         element = self.driver.find_element(by, value)
-        self.driver.execute_script('arguments[0].scrollIntoView();', element);
+        self.driver.execute_script('arguments[0].scrollIntoView();', element)
         # Need to scroll a little bit more because of the fixed header
         self.driver.execute_script('window.scroll(window.scrollX, window.scrollY-400)')
         element = self.wait.until(EC.element_to_be_clickable((by, value)))

@@ -47,7 +47,8 @@ def color_diff(diff):
 
 def resolve_conflict(filename, local_content, remote_content, msg):
     print()
-    print('\n' + Back.RED + Fore.WHITE + '\n\n  Conflict: ' + msg + '\n' + Style.RESET_ALL)
+    print('\n' + Back.RED + Fore.WHITE +
+          '\n\n  Conflict: ' + msg + '\n' + Style.RESET_ALL)
 
     msg = 'Continue with {}?'.format(filename)
     while True:
@@ -174,7 +175,7 @@ class StatusFile(object):
         jsondump = json.dumps(data, sort_keys=True, indent=2)
 
         # Remove trailling spaces (https://bugs.python.org/issue16333)
-        jsondump = re.sub('\s+$', '', jsondump, flags=re.MULTILINE)
+        jsondump = re.sub(r'\s+$', '', jsondump, flags=re.MULTILINE)
 
         # Normalize to unix line endings
         jsondump = normalize_line_endings(jsondump)
@@ -228,13 +229,15 @@ class TemplateConfigurationTable(object):
 
     def open(self):
         try:
-            element = self.worker.driver.find_element(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+            element = self.worker.find(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
             # Open Alma configuration
-            self.worker.wait_for_and_click(By.CSS_SELECTOR, '#ALMA_MENU_TOP_NAV_configuration')
-            self.worker.click(By.XPATH, '//*[@href="#CONF_MENU6"]')  # text() = "General"
+            self.worker.wait_for_and_click(
+                By.CSS_SELECTOR, '#ALMA_MENU_TOP_NAV_configuration')
+            # text() = "General"
+            self.worker.click(By.XPATH, '//*[@href="#CONF_MENU6"]')
             self.worker.click(By.XPATH, '//*[text() = "Customize Letters"]')
             self.worker.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
 
@@ -269,26 +272,33 @@ class TemplateConfigurationTable(object):
     def read(self):
 
         # Identify the indices of the column headers we're interested in
-        column_headers = [el.get_attribute('id') for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > th')]
-        filename_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename')
-        update_date_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate')
+        elems = self.worker.find(By.CSS_SELECTOR, '#TABLE_DATA_fileList tr > th')
+        column_headers = [el.get_attribute('id') for el in elems]
+        filename_col = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename') + 1
+        updatedate_col = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate') + 1
 
         # Read the filename column
-        self.filenames = [el.text.replace('../', '') for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % (filename_column_idx + 1))]
+        elems = self.worker.find(By.CSS_SELECTOR,
+                                 '#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % filename_col)
+        self.filenames = [el.text.replace('../', '') for el in elems]
 
         # Read the modification date column
-        self.update_dates = [el.text for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % (update_date_column_idx + 1))]
+        elems = self.worker.find(By.CSS_SELECTOR,
+                                 '#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % updatedate_col)
+        self.update_dates = [el.text for el in elems]
 
         # return [{x[0]:2 {'modified': x[1], 'index': n}} for n, x in enumerate(zip(filenames, update_dates))]
 
     def is_customized(self, index):
-        updated_by = self.worker.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
+        updated_by = self.worker.find(By.ID, 'SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
 
         return updated_by.text not in ('-', 'Network')
 
     def assert_filename(self, filename):
         # Assert that we are at the right letter
-        element = self.worker.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        element = self.worker.wait.until(
+            EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename'))
+        )
         elt = element.text.replace('../', '')
         assert elt == filename, "%r != %r" % (elt, filename)
 
@@ -304,13 +314,14 @@ class TemplateConfigurationTable(object):
         time.sleep(0.2)
 
         # Open the "ellipsis" menu.
-        self.worker.scroll_into_view_and_click('#input_fileList_{}'.format(index), By.CSS_SELECTOR)
+        self.worker.scroll_into_view_and_click(
+            '#input_fileList_{}'.format(index), By.CSS_SELECTOR)
         time.sleep(0.2)
 
         if self.is_customized(index):
             # Click "Edit" menu item
             edit_btn_selector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(index)
-            edit_btn = self.worker.driver.find_elements_by_css_selector(edit_btn_selector)
+            edit_btn = self.worker.find(By.CSS_SELECTOR, edit_btn_selector)
             self.worker.scroll_into_view_and_click(edit_btn_selector, By.CSS_SELECTOR)
         else:
             # Click "Customize" menu item
@@ -320,7 +331,7 @@ class TemplateConfigurationTable(object):
         # We should now be at the letter edit form. Assert that filename is indeed correct
         self.assert_filename(filename)
 
-        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
         return LetterContent(txtarea.text)
 
     def open_default_letter(self, filename):
@@ -330,7 +341,8 @@ class TemplateConfigurationTable(object):
         self.open()
 
         index = self.filenames.index(filename)
-        self.worker.wait.until(EC.presence_of_element_located((By.ID, 'SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename' % index)))
+        self.worker.wait.until(EC.presence_of_element_located(
+            (By.ID, 'SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename' % index)))
 
         if self.is_customized(index):
 
@@ -339,34 +351,36 @@ class TemplateConfigurationTable(object):
             time.sleep(0.2)
 
             # Click "View Default" menu item
-            self.worker.scroll_into_view_and_click('ROW_ACTION_fileList_%d_c.ui.table.btn.view_default' % index)
+            self.worker.scroll_into_view_and_click(
+                'ROW_ACTION_fileList_%d_c.ui.table.btn.view_default' % index)
             time.sleep(0.2)
 
         else:
             # Click the filename
-            self.worker.scroll_into_view_and_click('#SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename a' % index, By.CSS_SELECTOR)
+            self.worker.scroll_into_view_and_click(
+                '#SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename a' % index, By.CSS_SELECTOR)
             time.sleep(0.2)
 
         # Assert that filename is indeed correct
         self.assert_filename(filename)
 
         # Read text area content
-        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
         return LetterContent(txtarea.text)
 
     def close_letter(self):
         # If we are at specific letter, press the "go back" button.
-        elems = self.worker.driver.find_elements_by_css_selector('.pageTitle')
+        elems = self.worker.find(By.CSS_SELECTOR, '.pageTitle')
         if len(elems) != 0:
             title = elems[0].text.strip()
             if title == 'Configuration File':
                 try:
-                    backBtn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
+                    backBtn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonback')
                     backBtn.click()
                 except NoSuchElementException:
                     pass
                 try:
-                    backBtn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonnavigationcancel')
+                    backBtn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonnavigationcancel')
                     backBtn.click()
                 except NoSuchElementException:
                     pass
@@ -382,16 +396,18 @@ class TemplateConfigurationTable(object):
         # The "normal" way to set the value of a textarea with Selenium is to use
         # send_keys(), but it took > 30 seconds for some of the larger letters.
         # So here's a much faster way:
-        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
         txtarea_id = txtarea.get_attribute('id')
-        value = content.text.replace('"', '\\"').replace('\n', '\\n')  # Did we forget to escape something? Probably
-        self.worker.driver.execute_script('document.getElementById("' + txtarea_id + '").value = "' + value + '";')
+
+        value = content.text.replace('"', '\\"').replace('\n', '\\n')
+        script = 'document.getElementById("%s").value = "%s";' % (txtarea_id, value)
+        self.worker.driver.execute_script(script)
 
         # Submit the form
         try:
-            btn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
+            btn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonsave')
         except NoSuchElementException:
-            btn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
+            btn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttoncustomize')
         btn.click()
 
         # Wait for the table view.
@@ -424,15 +440,19 @@ def pull_defaults(table, local_storage, status_file):
 
         if old_sha1 is None:
             count_new += 1
-            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(
+                content.sha1[0:7]) + Style.RESET_ALL, progress, True)
         else:
             count_changed += 1
             if old_sha1 == content.sha1:
-                table.print_letter_status(filename, Fore.GREEN + 'no changes' + Style.RESET_ALL, progress, True)
+                table.print_letter_status(
+                    filename, Fore.GREEN + 'no changes' + Style.RESET_ALL, progress, True)
             else:
-                table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+                table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(
+                    old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
 
-    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed default letters\n'.format(count_new, count_changed) + Style.RESET_ALL)
+    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed default letters\n'.format(
+        count_new, count_changed) + Style.RESET_ALL)
 
 
 class TestPage(object):
@@ -445,7 +465,7 @@ class TestPage(object):
 
     def open(self):
         try:
-            element = self.worker.driver.find_element_by_id('cbuttonupload')
+            element = self.worker.find(By.ID, 'cbuttonupload')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
@@ -481,9 +501,9 @@ class TestPage(object):
         tmp.flush()
 
         # Set language
-        element = self.worker.driver.find_element_by_id('pageBeanuserPreferredLanguage')
+        element = self.worker.find(By.ID, 'pageBeanuserPreferredLanguage')
         element.click()
-        element = self.worker.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
+        element = self.worker.find(By.ID, 'pageBeanuserPreferredLanguage_hiddenSelect')
         select = Select(element)
         opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
         if lang not in opts:
@@ -493,21 +513,23 @@ class TestPage(object):
         longLangName = opts[lang]
 
         element = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
+            (By.XPATH,
+             '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
         ))
         element.click()
 
         # Upload the XML
-        file_field = self.worker.driver.find_element_by_id('pageBeannewFormFile')
+        file_field = self.worker.find(By.ID, 'pageBeannewFormFile')
         file_field.send_keys(tmp.name)
 
-        upload_btn = self.worker.driver.find_element_by_id('cbuttonupload')
+        upload_btn = self.worker.find(By.ID, 'cbuttonupload')
         upload_btn.click()
 
         self.worker.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
 
         run_btn = wait.until(
-            EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
+            EC.element_to_be_clickable(
+                (By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
         )
 
         cwh = self.worker.driver.current_window_handle
@@ -520,7 +542,8 @@ class TestPage(object):
         for handle in self.worker.driver.window_handles:
             self.worker.driver.switch_to_window(handle)
             if 'beanContentParam=htmlContent' in self.worker.driver.current_url:
-                self.worker.driver.set_window_size(self.worker.config.get('screenshot', 'width'), 600)
+                self.worker.driver.set_window_size(
+                    self.worker.config.get('screenshot', 'width'), 600)
                 with open(html_path, 'w+b') as html_file:
                     html_file.write(self.worker.driver.page_source.encode('utf-8'))
                 print('Saved output: %s' % html_path)
@@ -575,17 +598,21 @@ def pull(table, local_storage, status_file):
 
         # Store letter and update status.json
         if not local_storage.store(filename, content, table.modified(filename)):
-            table.print_letter_status(filename, Fore.RED + 'skipped due to conflict' + Style.RESET_ALL, progress, True)
+            table.print_letter_status(
+                filename, Fore.RED + 'skipped due to conflict' + Style.RESET_ALL, progress, True)
             continue
 
         if old_sha1 is None:
             count_new += 1
-            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(
+                content.sha1[0:7]) + Style.RESET_ALL, progress, True)
         else:
             count_changed += 1
-            table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+            table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(
+                old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
 
-    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed letters\n'.format(count_new, count_changed) + Style.RESET_ALL)
+    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed letters\n'.format(
+        count_new, count_changed) + Style.RESET_ALL)
 
 
 def push(table, local_storage, status_file, files=None):
@@ -607,10 +634,12 @@ def push(table, local_storage, status_file, files=None):
                 files.append(filename)
 
         if len(files) == 0:
-            sys.stdout.write(Fore.GREEN + 'Found no modified files.' + Style.RESET_ALL + '\n')
+            sys.stdout.write(
+                Fore.GREEN + 'Found no modified files.' + Style.RESET_ALL + '\n')
             return
 
-        sys.stdout.write(Fore.GREEN + 'Found {} modified file(s):'.format(len(files)) + Style.RESET_ALL + '\n')
+        sys.stdout.write(
+            Fore.GREEN + 'Found {} modified file(s):'.format(len(files)) + Style.RESET_ALL + '\n')
         for filename in files:
             print(' - {}'.format(filename))
 
@@ -642,14 +671,16 @@ def push(table, local_storage, status_file, files=None):
 
         table.put_contents(filename, local_content)
         count_pushed += 1
-        msg = 'updated from {} to {}'.format(old_sha1[0:7], local_content.sha1[0:7])
+        msg = 'updated from {} to {}'.format(
+            old_sha1[0:7], local_content.sha1[0:7])
         table.print_letter_status(filename, msg, progress, True)
 
         # Update the status file
         status_file.set_checksum(filename, local_content.sha1)
         status_file.set_modified(filename)
 
-    sys.stdout.write(Fore.GREEN + 'Pushed {} file(s)\n'.format(count_pushed) + Style.RESET_ALL)
+    sys.stdout.write(
+        Fore.GREEN + 'Pushed {} file(s)\n'.format(count_pushed) + Style.RESET_ALL)
 
 
 def test(testpage, files, languages):

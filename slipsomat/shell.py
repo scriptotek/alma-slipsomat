@@ -24,7 +24,7 @@ try:
     import readline
     # Remove some standard delimiters like "/".
     readline.set_completer_delims(' \'"')
-except:
+except ImportError:
     # Windows?
     readline = None
 
@@ -118,7 +118,7 @@ class Shell(Cmd):
         """))
 
     def do_test(self, arg):
-        languages='en'
+        languages = 'en'
         if '@' in arg:
             files, languages = arg.split('@')
         else:
