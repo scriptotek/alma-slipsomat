@@ -6,7 +6,7 @@ import getpass
 import sys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from selenium.webdriver.remote.errorhandler import NoSuchElementException
+from selenium.webdriver.remote.errorhandler import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -71,7 +71,7 @@ class Worker(object):
         element = self.wait.until(EC.element_to_be_clickable((by, value)))
         try:
             element.click()
-        except:
+        except WebDriverException:
             element.send_keys(Keys.RETURN)  # works in some edge cases
 
     def close(self):
