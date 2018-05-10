@@ -41,8 +41,11 @@ class Worker(object):
             timeout = self.default_timeout
         return WebDriverWait(self.driver, timeout)
 
-    def find(self, by, by_value):
+    def first(self, by, by_value):
         return self.driver.find_element(by, by_value)
+
+    def all(self, by, by_value):
+        return self.driver.find_elements(by, by_value)
 
     def wait_for(self, by, by_value, timeout=None):
         if timeout is not None:

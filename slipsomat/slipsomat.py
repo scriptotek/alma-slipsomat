@@ -229,7 +229,7 @@ class TemplateConfigurationTable(object):
 
     def open(self):
         try:
-            element = self.worker.find(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+            element = self.worker.first(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
@@ -272,25 +272,25 @@ class TemplateConfigurationTable(object):
     def read(self):
 
         # Identify the indices of the column headers we're interested in
-        elems = self.worker.find(By.CSS_SELECTOR, '#TABLE_DATA_fileList tr > th')
+        elems = self.worker.all(By.CSS_SELECTOR, '#TABLE_DATA_fileList tr > th')
         column_headers = [el.get_attribute('id') for el in elems]
         filename_col = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename') + 1
         updatedate_col = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate') + 1
 
         # Read the filename column
-        elems = self.worker.find(By.CSS_SELECTOR,
-                                 '#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % filename_col)
+        elems = self.worker.all(By.CSS_SELECTOR,
+                                '#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % filename_col)
         self.filenames = [el.text.replace('../', '') for el in elems]
 
         # Read the modification date column
-        elems = self.worker.find(By.CSS_SELECTOR,
-                                 '#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % updatedate_col)
+        elems = self.worker.all(By.CSS_SELECTOR,
+                                '#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % updatedate_col)
         self.update_dates = [el.text for el in elems]
 
         # return [{x[0]:2 {'modified': x[1], 'index': n}} for n, x in enumerate(zip(filenames, update_dates))]
 
     def is_customized(self, index):
-        updated_by = self.worker.find(By.ID, 'SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
+        updated_by = self.worker.first(By.ID, 'SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
 
         return updated_by.text not in ('-', 'Network')
 
@@ -321,7 +321,6 @@ class TemplateConfigurationTable(object):
         if self.is_customized(index):
             # Click "Edit" menu item
             edit_btn_selector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(index)
-            edit_btn = self.worker.find(By.CSS_SELECTOR, edit_btn_selector)
             self.worker.scroll_into_view_and_click(edit_btn_selector, By.CSS_SELECTOR)
         else:
             # Click "Customize" menu item
@@ -331,7 +330,7 @@ class TemplateConfigurationTable(object):
         # We should now be at the letter edit form. Assert that filename is indeed correct
         self.assert_filename(filename)
 
-        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
+        txtarea = self.worker.first(By.ID, 'pageBeanfileContent')
         return LetterContent(txtarea.text)
 
     def open_default_letter(self, filename):
@@ -365,22 +364,22 @@ class TemplateConfigurationTable(object):
         self.assert_filename(filename)
 
         # Read text area content
-        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
+        txtarea = self.worker.first(By.ID, 'pageBeanfileContent')
         return LetterContent(txtarea.text)
 
     def close_letter(self):
         # If we are at specific letter, press the "go back" button.
-        elems = self.worker.find(By.CSS_SELECTOR, '.pageTitle')
+        elems = self.worker.all(By.CSS_SELECTOR, '.pageTitle')
         if len(elems) != 0:
             title = elems[0].text.strip()
             if title == 'Configuration File':
                 try:
-                    backBtn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonback')
+                    backBtn = self.worker.first(By.ID, 'PAGE_BUTTONS_cbuttonback')
                     backBtn.click()
                 except NoSuchElementException:
                     pass
                 try:
-                    backBtn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonnavigationcancel')
+                    backBtn = self.worker.first(By.ID, 'PAGE_BUTTONS_cbuttonnavigationcancel')
                     backBtn.click()
                 except NoSuchElementException:
                     pass
@@ -396,7 +395,7 @@ class TemplateConfigurationTable(object):
         # The "normal" way to set the value of a textarea with Selenium is to use
         # send_keys(), but it took > 30 seconds for some of the larger letters.
         # So here's a much faster way:
-        txtarea = self.worker.find(By.ID, 'pageBeanfileContent')
+        txtarea = self.worker.first(By.ID, 'pageBeanfileContent')
         txtarea_id = txtarea.get_attribute('id')
 
         value = content.text.replace('"', '\\"').replace('\n', '\\n')
@@ -405,9 +404,9 @@ class TemplateConfigurationTable(object):
 
         # Submit the form
         try:
-            btn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttonsave')
+            btn = self.worker.first(By.ID, 'PAGE_BUTTONS_cbuttonsave')
         except NoSuchElementException:
-            btn = self.worker.find(By.ID, 'PAGE_BUTTONS_cbuttoncustomize')
+            btn = self.worker.first(By.ID, 'PAGE_BUTTONS_cbuttoncustomize')
         btn.click()
 
         # Wait for the table view.
@@ -465,7 +464,7 @@ class TestPage(object):
 
     def open(self):
         try:
-            element = self.worker.find(By.ID, 'cbuttonupload')
+            element = self.worker.first(By.ID, 'cbuttonupload')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
@@ -501,9 +500,9 @@ class TestPage(object):
         tmp.flush()
 
         # Set language
-        element = self.worker.find(By.ID, 'pageBeanuserPreferredLanguage')
+        element = self.worker.first(By.ID, 'pageBeanuserPreferredLanguage')
         element.click()
-        element = self.worker.find(By.ID, 'pageBeanuserPreferredLanguage_hiddenSelect')
+        element = self.worker.first(By.ID, 'pageBeanuserPreferredLanguage_hiddenSelect')
         select = Select(element)
         opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
         if lang not in opts:
@@ -519,10 +518,10 @@ class TestPage(object):
         element.click()
 
         # Upload the XML
-        file_field = self.worker.find(By.ID, 'pageBeannewFormFile')
+        file_field = self.worker.first(By.ID, 'pageBeannewFormFile')
         file_field.send_keys(tmp.name)
 
-        upload_btn = self.worker.find(By.ID, 'cbuttonupload')
+        upload_btn = self.worker.first(By.ID, 'cbuttonupload')
         upload_btn.click()
 
         self.worker.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
