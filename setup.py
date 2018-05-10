@@ -14,7 +14,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
 
 setup(name='slipsomat',
-      version='0.1.0',
+      version='0.2.0',  # Use bumpversion to update
       description='Sync Alma slips & letters',
       long_description=README,
       classifiers=[
@@ -23,15 +23,17 @@ setup(name='slipsomat',
           'Programming Language :: Python :: 3.3',
           'Programming Language :: Python :: 3.4',
           'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
       ],
+      keywords='alma browser-automation',
       author='Dan Michael O. Heggø',
       author_email='d.m.heggo@ub.uio.no',
       url='https://github.com/scriptotek/alma-slipsomat',
-      license='ISC',
+      license='MIT',
       install_requires=['selenium', 'colorama', 'python-dateutil'],
       extras_require={
         'inquirer': ['inquirer'],
       },
       packages=['slipsomat'],
-      entry_points={'console_scripts': ['slipsomat=slipsomat.slipsomat:main']}
+      entry_points={'console_scripts': ['slipsomat=slipsomat.shell:main']}
       )

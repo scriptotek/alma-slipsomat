@@ -1,926 +1,36 @@
-# encoding=utf-8
+# encoding=utf8
 from __future__ import print_function
-# from __future__ import unicode_strings
 
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from selenium.webdriver.remote.errorhandler import NoSuchElementException
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-
-try:
-    import inquirer
-except ImportError:
-    inquirer = None
-
-import dateutil.parser
+import os
+import os.path
+import re
 import time
 import sys
-import re
-import shlex
-from glob import glob
-from textwrap import dedent
-from io import StringIO
-import getpass
 import hashlib
-import os.path
-import platform
-import tempfile
 import json
-import traceback
-from xml.etree import ElementTree
-import atexit
-import cmd
 import difflib
-from colorama import Fore
+import tempfile
 
-histfile = '.slipsomat_history'
-try:
-    import readline
-    # Remove some standard delimiters like "/".
-    readline.set_completer_delims(' \'"')
-except:
-    # Windows?
-    readline = None
-
-try:
-    # Python 3
-    from configparser import ConfigParser
-except Exception:
-    # Python 2
-    from ConfigParser import ConfigParser
+from datetime import datetime
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.remote.errorhandler import NoSuchElementException
+from xml.etree import ElementTree
+from colorama import Fore, Back, Style
 
 try:
     input = raw_input  # Python 2
 except NameError:
     pass  # Python 3
 
-from datetime import datetime
-import colorama
-from colorama import Fore, Back, Style
+from .worker import Worker
 
-import argparse
 
-colorama.init()
-
-
-def normalize_line_endings(txt):
-    # Normalize to unix line endings
-    return txt.replace('\r\n', '\n').replace('\r', '\n').strip()
-
-
-def get_sha1(txt):
-    m = hashlib.sha1()
-    m.update(txt.encode('utf-8'))
-    return m.hexdigest()
-
-
-class Browser(object):
-    """
-    Selenium browser automation
-    """
-
-    def __init__(self, cfg_file, default_timeout=10):
-        """
-        Construct a new Browser object
-        Params:
-            cfg_file: Name of config file
-        """
-        self.driver = None
-        self._template_table = None
-        self.config = self.read_config(cfg_file)
-        self.instance = self.config.get('login', 'instance')
-        self.default_timeout = default_timeout
-
-    def waiter(self, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
-        return WebDriverWait(self.driver, timeout)
-
-    def wait_for(self, by, by_value, timeout=None):
-        if timeout is not None:
-            return self.waiter(timeout).until(EC.visibility_of_element_located((by, by_value)))
-        return self.wait.until(EC.visibility_of_element_located((by, by_value)))
-
-    def send_keys(self, by, by_value, text):
-        element = self.wait_for(by, by_value)
-        element.send_keys(text)
-        return element
-
-    def click(self, by, by_value):
-        element = self.wait.until(EC.element_to_be_clickable((by, by_value)))
-        element.click()
-        return element
-
-    def close(self):
-        try:
-            self.driver.close()
-        except Exception as e:
-            print("\nException closing driver:", e)
-
-    def restart(self):
-        if "config" in vars(self):  # check for test mode
-            self.close()
-            self._template_table = None
-            self.connect()
-
-    @staticmethod
-    def read_config(cfg_file):
-        config = ConfigParser()
-        defaults = StringIO(dedent(
-            u"""[login]
-
-            [selenium]
-            browser=firefox
-
-            [window]
-            width=1200
-            height=700
-
-            [screenshot]
-            width=1000
-            """
-        ))
-        config.read_file(defaults)
-        config.read(cfg_file)
-
-        if config.get('login', 'username') == '':
-            raise RuntimeError('No username configured in slipsomat.cfg')
-
-        if config.get('login', 'password') == '':
-            config.set('login', 'password', getpass.getpass())
-
-        return config
-
-    def get_driver(self):
-        # Start a new browser and return the WebDriver
-
-        browser_name = self.config.get('selenium', 'browser')
-
-        if browser_name == 'firefox':
-            from selenium.webdriver import Firefox
-
-            browser_binary = FirefoxBinary()
-
-            driver = Firefox(firefox_binary=browser_binary)
-            driver._is_remote = False  # Workaround for http://stackoverflow.com/a/42770761/489916
-            return driver
-
-        if browser_name == 'chrome':
-            from selenium.webdriver import Chrome
-
-            return Chrome()
-
-        if browser_name == 'phantomjs':
-            from selenium.webdriver import PhantomJS
-
-            return PhantomJS()
-
-        # @TODO: Add chrome
-        raise RuntimeError('Unsupported/unknown browser')
-
-    def connect(self):
-        domain = self.config.get('login', 'domain')
-        auth_type = self.config.get('login', 'auth_type')
-        institution = self.config.get('login', 'institution')
-        username = self.config.get('login', 'username')
-        password = self.config.get('login', 'password')
-
-        self.driver = self.get_driver()
-        self.driver.set_window_size(self.config.get('window', 'width'),
-                                    self.config.get('window', 'height'))
-        self.wait = self.waiter()
-
-        print('Opening instance {}:{}'.format(self.instance, institution))
-
-        if auth_type == 'Feide' and domain != '':
-            print('Logging in as {}@{}'.format(username, domain))
-
-            self.get('/mng/login?institute={}&auth=SAML'.format(institution))
-
-            element = self.wait.until(EC.visibility_of_element_located((By.ID, 'org_selector-selectized')))
-            element.click()
-
-            element = self.wait.until(EC.visibility_of_element_located((By.XPATH, '//div[@data-value="%s"]' % domain)))
-            element.click()
-
-            element = self.driver.find_element_by_id('selectorg_button')
-            element.click()
-
-        elif auth_type == 'SAML' and domain != '':
-            print('Logging in as {}@{}'.format(username, domain))
-            self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
-
-            element = self.wait.until(EC.visibility_of_element_located((By.ID, 'org')))
-            select = Select(element)
-            select.select_by_value(domain)
-
-            element = self.driver.find_element_by_id('submit')
-            element.click()
-            # We cannot use submit() because of
-            # http://stackoverflow.com/questions/833032/submit-is-not-a-function-error-in-javascript
-        else:
-            print('Logging in as {}'.format(username))
-            self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
-
-        self.send_keys(By.ID, 'username', username)
-        element = self.send_keys(By.ID, 'password', password)
-        element.send_keys(Keys.RETURN)
-
-        try:
-            # Look for some known element on the Alma main screen
-            self.wait_for(By.CSS_SELECTOR, '.logoAlma', 30)
-        except NoSuchElementException:
-            raise Exception('Failed to login to Alma')
-
-        print("login DONE")
-
-    def get(self, url):
-        return self.driver.get('https://{}.alma.exlibrisgroup.com/{}'.format(self.instance, url.lstrip('/')))
-
-    def get_template_table(self):
-        if self._template_table is None:
-            # Cache the template table to make subsequent pushes faster.
-            self._template_table = TemplateTable(self)
-        return self._template_table
-
-class LettersStatus(object):
-
-    def __init__(self, table):
-        self.table = table
-        self.load()
-
-    def load(self):
-        self.letters = {}
-        if os.path.exists('status.json'):
-            with open('status.json') as f:
-                data = json.load(f)
-                self.letters = data['letters']
-
-        # if self.data.get('last_pull_date') is not None:
-        #     self.data['last_pull_date'] = dateutil.parser.parse(self.data['last_pull_date'])
-
-    def save(self):
-
-        letters = {}
-        for letter in self.table.rows:
-            letters[letter.filename] = {
-                'checksum': letter.checksum,
-                'default_checksum': letter.default_checksum,
-                'modified': letter.modified,
-            }
-
-        # if self.letters.get('last_pull_date') is not None:
-        #     self.letters['last_pull_date'] = self.letters['last_pull_date'].isoformat()
-
-        with open('status.json', 'wb') as f:
-            data = {'letters': letters}
-            jsondump = json.dumps(data, sort_keys=True, indent=2)
-
-            # Remove trailling spaces (https://bugs.python.org/issue16333)
-            jsondump = re.sub('\s+$', '', jsondump, flags=re.MULTILINE)
-
-            # Normalize to unix line endings
-            jsondump = normalize_line_endings(jsondump)
-
-            f.write(jsondump.encode('utf-8'))
-
-
-class CodeTable(object):
-    """
-    Abstraction for 'Letter emails' (Code tables / tables.codeTables.codeTablesList.xml)
-    """
-
-    def __init__(self, browser):
-        self.browser = browser
-        self.status = LettersStatus(self)
-
-        self.table_url = '/infra/action/pageAction.do?xmlFileName=tables.codeTables.codeTablesList.xml?operation=LOAD&pageBean.directFilter=LETTER&pageViewMode=Edit&resetPaginationContext=true'
-
-        self.open()
-        self.rows = self.parse_rows()
-
-
-class TemplateTable(object):
-    """
-    Abstraction for 'Customize letters' (Configuration Files / configuration_setup.configuration_mng.xml)
-    """
-
-    def __init__(self, browser):
-        self.browser = browser
-        self.status = LettersStatus(self)
-        self.open()
-        self.rows = self.parse_rows()
-
-    def get_letter(self, filename):
-        for letter in self.rows:
-            if letter.filename == filename:
-                return letter
-        raise ValueError('Filename not found in template table: %s' % filename)
-
-    def open(self):
-
-        # If we are at specific letter, press the "go back" button.
-        elems = self.browser.driver.find_elements_by_css_selector('.pageTitle')
-        if len(elems) != 0:
-            title = elems[0].text.strip()
-            if title == 'Configuration File':
-                try:
-                    backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
-                    backBtn.click()
-                except NoSuchElementException:
-                    pass
-                try:
-                    backBtn = self.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonnavigationcancel')
-                    backBtn.click()
-                except NoSuchElementException:
-                    pass
-
-
-        elems = self.browser.driver.find_elements_by_xpath('//*[@aria-label="Open Alma configuration"]')
-        if len(elems) != 0:
-            # Open Alma configuration
-            self.browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-            self.browser.click(By.XPATH, '//*[@href="#CONF_MENU6"]')
-            self.browser.click(By.XPATH, '//*[text() = "Customize Letters"]')
-
-        self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
-
-    def parse_rows(self):
-        self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
-
-        sys.stdout.write('Reading table... ')
-        sys.stdout.flush()
-
-        column_headers = [el.get_attribute('id') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > th')]
-
-        filename_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename')
-        update_date_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate')
-
-        filenames = [el.text.replace('../', '') for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % (filename_column_idx + 1))]
-        dates = [el.text for el in self.browser.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % (update_date_column_idx + 1))]
-
-        if len(filenames) != len(dates):
-            raise RuntimeError('Table mismatch: %d filenames, %d dates' % (len(filenames), len(dates)))
-
-        rows = []
-        for n, filename in enumerate(filenames):
-            modified = dates[n]
-            if filename not in self.status.letters:
-                self.status.letters[filename] = {}
-            rows.append(LetterTemplate(table=self,
-                                       index=n,
-                                       filename=filename,
-                                       modified=modified,
-                                       checksum=self.status.letters[filename].get('checksum'),
-                                       default_checksum=self.status.letters[filename].get('default_checksum')
-                                       ))
-        sys.stdout.write('\rReading table... DONE\n')
-
-        return rows
-
-
-class LetterTemplate(object):
-
-    def __init__(self, table, index, filename, modified, checksum, default_checksum):
-        self.table = table
-
-        self.index = index
-        self.filename = filename
-        self.modified = modified
-        self.checksum = checksum
-        self.default_checksum = default_checksum
-        self.wait = self.table.browser.waiter()
-
-    def scroll_into_view_and_click(self, value, by=By.ID):
-        element = self.table.browser.driver.find_element(by, value)
-        self.table.browser.driver.execute_script('arguments[0].scrollIntoView();', element);
-        # Need to scroll a little bit more because of the fixed header
-        self.table.browser.driver.execute_script('window.scroll(window.scrollX, window.scrollY-400)')
-        element = self.wait.until(EC.element_to_be_clickable((by, value)))
-        try:
-            element.click()
-        except:
-            element.send_keys(Keys.RETURN)  # works in some edge cases
-
-    def console_msg(self, msg=''):
-        sys.stdout.write('\r- {:60} {:40}'.format(
-            self.filename.split('/')[-1] + ' (' + self.modified + ')',
-            msg
-        ))
-        sys.stdout.write('\r- {:60} {}'.format(
-            self.filename.split('/')[-1] + ' (' + self.modified + ')',
-            msg
-        ))
-        sys.stdout.flush()
-
-    def view(self):
-
-        try:
-            # Check if we are already on the view page
-            self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        except NoSuchElementException:
-            self.scroll_into_view_and_click('#SELENIUM_ID_fileList_ROW_{}_COL_cfgFilefilename a'.format(self.index), By.CSS_SELECTOR)
-
-            # Otherwise, click the link
-        # Locate filename and content
-        element = self.table.browser.wait_for(By.ID, 'pageBeanconfigFilefilename')
-        filename = element.text.replace('../', '')
-        assert filename == self.filename, "%r != %r" % (filename, self.filename)
-
-    def is_customized(self):
-        updatedBy = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_cfgFileupdatedBy'.format(self.index))
-        return updatedBy.text not in ('-', 'Network')
-
-    def view_default(self):
-
-        # Open "Actions" menu
-        self.scroll_into_view_and_click('input_fileList_{}'.format(self.index))
-
-        # Click "View Default" menu item
-        self.scroll_into_view_and_click('ROW_ACTION_fileList_{}_c.ui.table.btn.view_default'.format(self.index))
-
-        # Wait for new page to load
-        element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
-
-        # Assert that filename is correct
-        filename = element.text.replace('../', '')
-        assert filename == self.filename, "%r != %r" % (filename, self.filename)
-
-    def edit(self):
-        self.console_msg('opening...')
-
-        el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
-        if len(el) != 0 and not el.is_enabled():
-            # Go back to table
-            self.table.open()
-
-        def open_letter_from_menu():
-            el = self.table.browser.driver.find_elements_by_css_selector('#pageBeanfileContent')
-            if len(el) == 0:
-                time.sleep(0.2)
-
-                # To avoid
-                #   Exception: Message: unknown error: Element is not clickable at point (738, 544).
-                #   Other element would receive the click: <span class="buttonAction roundLeft roundRight">...</span>
-                self.scroll_into_view_and_click('#input_fileList_{}'.format(self.index), By.CSS_SELECTOR)
-                time.sleep(0.2)
-
-                # Edit letter that is already customized
-                editBtnSelector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(self.index)
-                editBtn = self.table.browser.driver.find_elements_by_css_selector(editBtnSelector)
-                if len(editBtn) != 0:
-                    self.console_msg('editing...')
-                    self.scroll_into_view_and_click(editBtnSelector, By.CSS_SELECTOR)
-                else:
-                    # Customize letter
-                    self.console_msg('customizing...')
-                    customizeBtnSelector = '#ROW_ACTION_fileList_{} a'.format(self.index)
-                    self.scroll_into_view_and_click(customizeBtnSelector, By.CSS_SELECTOR)
-
-        try:
-            open_letter_from_menu()
-            element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
-        except TimeoutException:
-            self.console_msg('retrying...')
-            open_letter_from_menu()
-            element = self.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
-
-        filename = element.text.replace('../', '')
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-
-        assert filename == self.filename, "%r != %r" % (filename, self.filename)
-        assert txtarea.is_enabled()
-        return txtarea
-
-    def local_modified(self):
-        content = normalize_line_endings(open(self.filename, 'rb').read().decode('utf-8'))
-        current_chck = get_sha1(content)
-
-        return current_chck != self.checksum
-
-    def remote_modified(self):
-        q = self.table.browser.driver.find_elements_by_id('TABLE_DATA_fileList')
-        if len(q) == 0:
-            self.console_msg('opening table... ')
-            self.table.open()
-
-        today = datetime.now().strftime('%d/%m/%Y')
-
-        # If modification date has not changed from the cached modification date,
-        # no modifications have occured. If the modification date is today, we cannot
-        # be sure, since there is no time information, just date.
-
-        if os.path.exists(self.filename) and self.modified == self.table.status.letters[self.filename]['modified'] and self.modified != today:
-            return False
-
-        self.console_msg('checking letter... ')
-        self.view()
-
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        content = normalize_line_endings(txtarea.text)
-
-        old_sha1 = self.checksum
-        new_sha1 = get_sha1(content)
-
-        return old_sha1 != new_sha1
-
-    def _can_continue(self, local_txt, remote_txt, msg):
-        # Compare text checksum with value in status.json
-
-        if self.checksum is None:
-            return True  # it's a new letter
-
-        if remote_txt is not None and normalize_line_endings(remote_txt) == normalize_line_endings(local_txt):
-            self.console_msg(Fore.GREEN + 'no changes' + Style.RESET_ALL)
-            return False
-
-        opts = {
-            'local_sha': self.checksum[:8],
-            'fs_sha': get_sha1(normalize_line_endings(local_txt))[:8]
-        }
-
-        if remote_txt is None:
-            if opts['local_sha'] == opts['fs_sha']:
-                return True
-
-        else:
-            remote_txt = normalize_line_endings(remote_txt)
-            remote_chks = [
-                get_sha1(remote_txt),
-                get_sha1(remote_txt + "\n"),
-            ]
-
-            if self.checksum in remote_chks:
-                return True
-            opts['remote_sha'] = get_sha1(remote_txt)[:8]
-
-        print()
-        print('\n' + Back.RED + Fore.WHITE + '\n\n  Warning: ' + msg % opts + '\n' + Style.RESET_ALL)
-
-        msg = 'Continue with {}?'.format(self.filename)
-        if remote_txt is None:
-            return input("%s [y: yes, n: no] " % msg).lower()[:1] == 'y'
-        else:
-            while True:
-                response = input(Fore.CYAN + "%s [y: yes, n: no, d: diff] " % msg + Style.RESET_ALL).lower()[:1]
-                if response == 'd':
-                    show_diff(remote_txt, local_txt)
-                else:
-                    return response == 'y'
-
-    def pull(self):
-        self.console_msg('pulling letter...')
-
-        self.view()
-
-        if not os.path.exists(os.path.dirname(self.filename)):
-            os.makedirs(os.path.dirname(self.filename))
-
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        remote_content = normalize_line_endings(txtarea.text)
-
-        # Verify text checksum against local checksum
-        if os.path.isfile(self.filename):
-            with open(self.filename, 'rb') as f:
-                local_content = f.read().decode('utf-8')
-
-            if not self._can_continue(local_content, None,
-                    'Conflict: Trying to pull in a file modified remotely in Alma, but the local file\n' +
-                    '  also seems to have changes. If you continue, the local changes will be overwritten.'
-                    '  Checksum of the local file (%(fs_sha)s) does not match the value in status.sjon (%(local_sha)s)'):
-                print('Skipping')
-                self.table.open()
-                return False
-
-        with open(self.filename, 'wb') as f:
-            f.write(remote_content.encode('utf-8'))
-
-        self.checksum = get_sha1(remote_content)
-        self.table.open()
-
-    def pull_default(self):
-        is_customized = self.is_customized()
-
-        if is_customized:
-            self.view_default()
-        else:
-            self.view()
-
-        txtarea = self.table.browser.driver.find_element_by_id('pageBeanfileContent')
-        content = normalize_line_endings(txtarea.text)
-
-        # Write contents to default letter
-        filename = 'defaults/' + self.filename
-        if not os.path.exists(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename))
-        with open(filename, 'wb') as f:
-            f.write(content.encode('utf-8'))
-        self.default_checksum = get_sha1(content)
-
-        if not is_customized:
-            # Write contents to standard letter as well
-            filename = self.filename
-            if not os.path.exists(os.path.dirname(filename)):
-                os.makedirs(os.path.dirname(filename))
-            with open(filename, 'wb') as f:
-                f.write(content.encode('utf-8'))
-            self.checksum = get_sha1(content)
-
-        # Go back
-        self.table.open()
-
-    def set_text(self, id, value):
-        """
-        The "normal" way to set the value of a textarea with Selenium is to use
-        send_keys(), but it took > 30 seconds for some of the larger letters.
-        So here's a much faster way:
-        """
-        value = value.replace('"', '\\"').replace('\n', '\\n')  # Did we forget to escape something? Probably
-        self.table.browser.driver.execute_script('document.getElementById("' + id + '").value = "' + value + '";')
-
-    def push(self):
-        self.console_msg('opening')
-
-        # Get new text
-        local_content = open(self.filename, 'rb').read().decode('utf-8')
-
-        # Validate XML: This will throw an xml.etree.ElementTree.ParseError on invalid XML
-        try:
-            ElementTree.fromstring(local_content.encode('utf-8'))
-        except ElementTree.ParseError as e:
-            print('\n%sError: The file "%s" contains invalid XML:%s' % (Fore.RED, self.filename, Style.RESET_ALL))
-            print(Fore.RED + str(e) + Style.RESET_ALL)
-            return False
-
-        # Normalize line endings
-        local_content = normalize_line_endings(local_content)
-
-        # Open the edit form and locate the textarea
-        txtarea = self.edit()
-
-        # Verify text checksum against local checksum
-
-        self.console_msg('checking...')
-        show_diff(txtarea.text, local_content)
-
-        if not self._can_continue(local_content, txtarea.text,
-                'The checksum of the remote file (%(remote_sha)s) does not match the local value in\n' +
-                '  status.json (%(local_sha)s), meaning it might have been modified directly in Alma.\n' +
-                '  Please review the diff below.'):
-            print('Skipping')
-            self.table.open()
-            return False
-
-        self.console_msg('saving...')
-
-        # Send new text to text area
-        self.set_text(txtarea.get_attribute('id'), local_content)
-
-        # Submit the form
-        try:
-            btn = self.table.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
-        except NoSuchElementException:
-            btn = self.table.browser.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
-        btn.click()
-
-        # Wait for the table view
-        element = self.wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".typeD table"))
-        )
-
-        # Update and save status.json
-        modified = self.table.browser.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_{}_COL_updateDate'.format(self.index)).text
-        self.checksum = get_sha1(local_content)
-        self.modified = modified
-        self.table.status.save()
-        return True
-
-
-def pull(browser):
-    """
-    Pull in letters modified directly in Alma,
-    letters whose remote checksum does not match the value in status.json
-    Params:
-        browser: Browser object
-    """
-    fetched = 0
-    table = browser.get_template_table()
-
-    print('Checking all letters for changes...')
-    for letter in table.rows:
-        letter.console_msg()
-        if letter.remote_modified():
-            old_chk = letter.checksum
-            letter.pull()
-            if old_chk is None:
-                letter.console_msg('fetched new letter @ {}'.format(letter.checksum[0:7]))
-            else:
-                letter.console_msg('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
-            fetched += 1
-        else:
-            letter.console_msg('no changes')
-
-        sys.stdout.write('\n')
-
-    sys.stdout.write(Fore.GREEN + '{} of {} files contained new modifications\n'.format(fetched, len(table.rows)) + Style.RESET_ALL)
-
-    # status['last_pull_date'] = datetime.now()
-    table.status.save()
-
-
-def pull_defaults(browser):
-    """
-    Pull defaults from Alma
-    Params:
-        browser: Browser object
-    """
-    fetched = 0
-    table = browser.get_template_table()
-
-    print('Checking all letters...')
-    for letter in table.rows:
-
-        sys.stdout.write('- {:60}'.format(
-            letter.filename.split('/')[-1],
-        ))
-        sys.stdout.flush()
-
-        old_chk = letter.default_checksum
-        letter.pull_default()
-        if letter.default_checksum != old_chk:
-            if old_chk is None:
-                sys.stdout.write('fetched new letter @ {}'.format(letter.default_checksum[0:7]))
-            else:
-                sys.stdout.write('updated from {} to {}'.format(old_chk[0:7], letter.default_checksum[0:7]))
-            fetched += 1
-        else:
-            sys.stdout.write('no changes')
-
-        sys.stdout.write('\n')
-
-    sys.stdout.write(Fore.GREEN + '{} of {} files contained new modifications\n'.format(fetched, len(table.rows)) + Style.RESET_ALL)
-
-    # status['last_pull_date'] = datetime.now()
-    table.status.save()
-
-
-def push(browser, files):
-    """
-    Push locally modified files (letters whose local checksum does not match
-    the value in status.json) to Alma, and update status.json with new checksums.
-    Params:
-        browser: Browser object
-    """
-    table = browser.get_template_table()
-    table.open()
-
-    if len(files) == 0:
-        modified = []
-        for letter in table.rows:
-            if letter.local_modified():
-                modified.append(letter)
-
-        if len(modified) == 0:
-            sys.stdout.write(Fore.GREEN + 'No files contained local modifications.' + Style.RESET_ALL + '\n')
-            return
-
-        sys.stdout.write(Fore.GREEN + 'The following {} file(s) contains local modifications.'.format(len(modified)) + Style.RESET_ALL + '\n')
-        for letter in modified:
-            print(' - {}'.format(letter.filename))
-            files.append(letter.filename)
-
-        msg = 'Push updates to Alma? '
-        if input("%s (y/N) " % msg).lower() != 'y':
-            print('Aborting')
-            return
-
-    for filename in files:
-        letter = table.get_letter(filename)
-
-        old_chk = letter.checksum
-        if letter.push():
-            letter.console_msg('updated from {} to {}'.format(old_chk[0:7], letter.checksum[0:7]))
-            sys.stdout.write('\n')
-
-
-def test_XML(browser, filename, languages='en'):
-    """
-    Run a "notification template" test in Alma. An XML file is uploaded and processed
-    Params:
-        browser: Browser object
-        filename: string with the name of the XML file in test-data to use
-    """
-    wait = browser.waiter()
-
-    source_files = glob(os.path.abspath(os.path.join('test-data', filename)))
-    languages = languages.split(',')
-
-    if len(source_files) == 0:
-        print('Error: No such file')
-
-    for n, source_path in enumerate(source_files):
-
-        if not os.path.isfile(source_path):
-            print("File not found: %s" % source_path)
-            return
-
-        local_content = open(source_path, 'rb').read()
-        try:
-            ElementTree.fromstring(local_content)
-        except ElementTree.ParseError as e:
-            print('%sError: The file "%s" contains invalid XML:%s' % (Fore.RED, os.path.basename(source_path), Style.RESET_ALL))
-            print(Fore.RED + str(e) + Style.RESET_ALL)
-            return
-
-        source_path_root, source_path_ext = os.path.splitext(source_path)
-
-        for m, lang in enumerate(languages):
-
-            png_path = '%s_%s.png' % (source_path_root, lang)
-            html_path = '%s_%s.html' % (source_path_root, lang)
-
-            tmp = tempfile.NamedTemporaryFile('w+b')
-            with open(source_path, 'rb') as op:
-                tmp.write(re.sub('<preferred_language>[a-z]+</preferred_language>',
-                                 '<preferred_language>%s</preferred_language>' % lang,
-                                 op.read().decode('utf-8')).encode('utf-8'))
-            tmp.flush()
-
-            try:
-                element = browser.driver.find_element_by_id('cbuttonupload')
-            except NoSuchElementException:
-                browser.get('/mng/action/home.do')
-
-                # Open Alma configuration
-                browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-                browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-                browser.click(By.XPATH, '//*[@href="#CONF_MENU6"]')
-                browser.click(By.XPATH, '//*[text() = "Notification Template"]')
-
-                browser.wait_for(By.ID, 'cbuttonupload')
-
-            # Set language
-            element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage')
-            element.click()
-            element = browser.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
-            select = Select(element)
-            opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
-            longLangName = opts[lang]
-
-            cur = n * len(languages) + m + 1
-            tot = len(languages) * len(source_files)
-            print('[%d/%d] Testing "%s" using language "%s"' % (cur, tot,
-                                                                os.path.basename(source_path),
-                                                                longLangName))
-
-            element = wait.until(EC.element_to_be_clickable(
-                (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
-            ))
-            element.click()
-
-
-            # Upload the XML
-            file_field = browser.driver.find_element_by_id('pageBeannewFormFile')
-            file_field.send_keys(tmp.name)
-
-            upload_btn = browser.driver.find_element_by_id('cbuttonupload')
-            upload_btn.click()
-
-            browser.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
-
-            run_btn = wait.until(
-                EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
-            )
-
-            cwh = browser.driver.current_window_handle
-
-            run_btn.click()
-            time.sleep(1)
-
-            # Take a screenshot
-            found_win = False
-            for handle in browser.driver.window_handles:
-                browser.driver.switch_to_window(handle)
-                if 'beanContentParam=htmlContent' in browser.driver.current_url:
-                    browser.driver.set_window_size(browser.config.get('screenshot', 'width'), 600)
-                    with open(html_path, 'w+b') as html_file:
-                        html_file.write(browser.driver.page_source.encode('utf-8'))
-                    print('Saved output: %s' % html_path)
-                    if browser.driver.save_screenshot(png_path):
-                        print('Saved screenshot: %s' % png_path)
-                    else:
-                        print('Failed to save screenshot')
-                    found_win = True
-                    break
-
-            if not found_win:
-                print(Fore.RED + 'ERROR: Failed to produce output!' + Fore.RESET)
-            browser.driver.switch_to_window(cwh)
-            tmp.close()
+def normalize_line_endings(text):
+    # Normalize line endings to LF and strip ending linebreak.
+    # Useful when collaborating cross-platform.
+    return text.replace('\r\n', '\n').replace('\r', '\n').strip()
 
 
 def color_diff(diff):
@@ -935,169 +45,629 @@ def color_diff(diff):
             yield line
 
 
+def resolve_conflict(filename, local_content, remote_content, msg):
+    print()
+    print('\n' + Back.RED + Fore.WHITE + '\n\n  Conflict: ' + msg + '\n' + Style.RESET_ALL)
+
+    msg = 'Continue with {}?'.format(filename)
+    while True:
+        response = input(Fore.CYAN + "%s [y: yes, n: no, d: diff] " % msg + Style.RESET_ALL).lower()[:1]
+        if response == 'd':
+            show_diff(local_content, remote_content)
+        else:
+            return response == 'y'
+
+
 def show_diff(src, dst):
-    src = src.strip().splitlines()
-    dst = dst.strip().splitlines()
+    src = src.text.strip().splitlines()
+    dst = dst.text.strip().splitlines()
 
     print()
     for line in color_diff(difflib.unified_diff(src, dst, fromfile='Local', tofile='Alma')):
         print(line)
 
 
-class Shell(cmd.Cmd, object):
-    """
-    Interactive shell for parsing commands
-    """
-    intro = 'Welcome to the slipsomat. Type help or ? to list commands.\n'
-    prompt = "\001\033[1;36m\002slipsomat>\001\033[0m\002 "
-    file = None
+class LetterContent(object):
 
-    def __init__(self, browser):
-        """
-        Construct a new Shell object
-        Params:
-            browser: Browser object for command dispatch
-        """
-        super(Shell, self).__init__()
-        self.browser = browser
+    def __init__(self, text):
+        self.text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
+        self.validate()
 
-    @staticmethod
-    def completion_helper(basedir, word):
-        candidates = []
-        for root, dirs, files in os.walk(basedir):
-            for file in files:
-                candidates.append(os.path.join(root[len(basedir):], file))
-        return [c for c in candidates if c.lower().startswith(word.lower())]
+    @property
+    def sha1(self):
+        m = hashlib.sha1()
+        m.update(self.text.encode('utf-8'))
+        return m.hexdigest()
 
-    def emptyline(self):
-        "handle empty lines"
-        pass
-
-    def do_exit(self, arg):
-        "Exit the program"
-        print("\nbye")
-        exit()
-
-    def do_pull(self, arg):
-        "Pull in letters modified directly in Alma"
-        self.execute(pull)
-
-    def do_defaults(self, arg):
-        "Pull in updates to default letters"
-        self.execute(pull_defaults)
-
-    def help_push(self):
-        print(dedent("""
-        push
-
-            Push locally modified files to Alma. With no arguments specified, the
-            command will look for locally modified files and ask if you want to
-            push these.
-
-        push <filename>
-
-            Specify a filename relative to xsl/letters to only push a specific file.
-        """))
-
-    def do_push(self, arg):
-        files = ['xsl/letters/%s' % filename for filename in shlex.split(arg)]
-        self.execute(push, files)
-
-    def complete_push(self, word, line, begin_idx, end_idx):
-        "Complete push arguments"
-        return self.completion_helper('xsl/letters/', word)
-
-    def help_test(self):
-        print(dedent("""
-        test <filename>@<lang>
-
-            Test letter output by uploading XML files in the 'test-data' folder to
-            the Alma Notification Template and storing screenshots of the resulting
-            output.
-
-        Parameters:
-            - <filename> can be either a single filename in the 'test-data' folder
-              or a glob pattern like '*.xml'
-            - <lang> can be either a single language code or multiple language codes
-              separated by comma. Defaults to "en" if not specified.
-        """))
-
-    def do_test(self, arg):
-        self.execute(test_XML, *arg.split('@'))
-
-    def complete_test(self, word, line, begin_idx, end_idx):
-        "Complete test arguments"
-        return self.completion_helper('test-data/', word)
-
-    # Aliases
-    do_EOF = do_exit  # ctrl-d
-    do_eof = do_EOF
-    do_quit = do_exit
-
-    def handle_exception(self, e):
-        print("\nException:", e)
-        traceback.print_exc(file=sys.stdout)
-
-        if inquirer is None or not hasattr(inquirer, 'List'):
-            print('Please "pip install inquirer" if you would like more debug options')
-            sys.exit(0)
-        else:
-            q = inquirer.List('goto',
-                              message='Now what?',
-                              choices=['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
-                              )
-            answers = inquirer.prompt([q])
-
-            if answers['goto'] == 'Debug with ipdb':
-                try:
-                    import ipdb
-                except ImportError:
-                    print('Please run "pip install ipdb" to install ipdb')
-                    sys.exit(1)
-                ipdb.post_mortem()
-                sys.exit(0)
-            elif answers['goto'] == 'Debug with pdb':
-                import pdb
-                pdb.post_mortem()
-                sys.exit(0)
-            elif answers['goto'] == 'Restart browser':
-                self.browser.restart()
-            else:
-                sys.exit(0)
-
-    def preloop(self):
-        if readline is not None and os.path.exists(histfile):
-            readline.read_history_file(histfile)
-
-    def execute(self, function, *args):
-        "Executes the function, and handle exceptions"
-
-        if readline is not None:
-            readline.set_history_length(10000)
-            readline.write_history_file(histfile)
+    def validate(self):
         try:
-            function(self.browser, *args)
-        except Exception as e:
-            self.handle_exception(e)
-
-    def precmd(self, line):
-        "hook that is executed  when input is received"
-        return line.strip()
+            ElementTree.fromstring(self.text)
+        except ElementTree.ParseError as e:
+            print('%sError: The file contains invalid XML:%s' % (Fore.RED, Style.RESET_ALL))
+            print(Fore.RED + str(e) + Style.RESET_ALL)
+            return
 
 
-def main():
-    parser = argparse.ArgumentParser()
-#     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
-    parser.add_argument("-t", "--test", help="shell test, no browser", action="store_true")
-    options = parser.parse_args()
-    if not os.path.exists('slipsomat.cfg'):
-        print('No slipsomat.cfg file found in this directory. Exiting.')
-        return
+class LocalStorage(object):
+    """
+    File storage abstraction class.
+    """
 
-    browser = Browser('slipsomat.cfg')
+    def __init__(self, status_file):
+        self.status_file = status_file
 
-    if not options.test:  # test mode without driver
-        browser.connect()
-        atexit.register(browser.close)
+    def is_modified(self, filename):
+        """
+        Returns True if the file has local changes that hasn't been pushed to Alma yet,
+        that is if the checksum of the local file differs from the value in the status file.
+        """
+        local_content = self.get_content(filename)
+        return local_content.text != '' and local_content.sha1 != self.status_file.checksum(filename)
 
-    Shell(browser).cmdloop()
+    def get_content(self, filename):
+        """
+        Read the contents of a letter from disk and return it as a LetterContent object.
+        If no local version exists yet, an empty object is returned.
+        """
+        if not os.path.isfile(filename):
+            return LetterContent('')
+        with open(filename, 'rb') as fp:
+            return LetterContent(fp.read().decode('utf-8'))
+
+    def store(self, filename, content, modified):
+        """
+        Store the contents of a letter to disk, but only after checking if the local version has
+        changes that will be overwritten.
+        """
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+
+        local_content = self.get_content(filename)
+        if local_content.text != '' and local_content.sha1 != self.status_file.checksum(filename):
+            # The local file has been changed
+            if not resolve_conflict(filename, content, local_content,
+                                    'Pulling in this file would cause local changes to be overwritten.'):
+                return False
+
+        # Actually store the contents to disk
+        with open(filename, 'wb') as f:
+            f.write(content.text.encode('utf-8'))
+
+        # Update the status file
+        self.status_file.set_checksum(filename, content.sha1)
+        self.status_file.set_modified(filename, modified)
+
+        return True
+
+    def store_default(self, filename, content):
+        """
+        Store the contents of a default letter to disk. Since the default letters cannot be
+        uploaded, only downloaded, we do not care to check if the local file has changes
+        that will be overwritten.
+        """
+        filename = os.path.join('defaults', filename)
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+        with open(filename, 'wb') as f:
+            f.write(content.text.encode('utf-8'))
+
+        # Update the status file
+        self.status_file.set_default_checksum(filename, content.sha1)
+
+
+class StatusFile(object):
+
+    def __init__(self):
+        letters = {}
+        if os.path.exists('status.json'):
+            with open('status.json') as fp:
+                contents = json.load(fp)
+            letters = contents['letters']
+
+        self.letters = letters
+
+    def save(self):
+        data = {
+            'version': 1,
+            'letters': self.letters,
+        }
+        jsondump = json.dumps(data, sort_keys=True, indent=2)
+
+        # Remove trailling spaces (https://bugs.python.org/issue16333)
+        jsondump = re.sub('\s+$', '', jsondump, flags=re.MULTILINE)
+
+        # Normalize to unix line endings
+        jsondump = normalize_line_endings(jsondump)
+
+        with open('status.json', 'wb') as fp:
+            fp.write(jsondump.encode('utf-8'))
+
+    def get(self, filename, property, default=None):
+        if filename not in self.letters:
+            return default
+        return self.letters[filename].get(property)
+
+    def set(self, filename, property, value):
+        if filename not in self.letters:
+            self.letters[filename] = {}
+        self.letters[filename][property] = value
+        self.save()
+
+    def modified(self, filename):
+        return self.get(filename, 'modified')
+
+    def checksum(self, filename):
+        return self.get(filename, 'checksum')
+
+    def default_checksum(self, filename):
+        return self.get(filename, 'default_checksum')
+
+    def set_modified(self, filename, modified=None):
+        if modified is None:
+            modified = datetime.now().strftime('%d/%m/%Y')
+        self.set(filename, 'modified', modified)
+
+    def set_checksum(self, filename, checksum):
+        self.set(filename, 'checksum', checksum)
+
+    def set_default_checksum(self, filename, checksum):
+        self.set(filename, 'default_checksum', checksum)
+
+
+class TemplateConfigurationTable(object):
+    """
+    Configuration > Customize letters
+    """
+
+    def __init__(self, worker):
+        self.filenames = []
+        self.update_dates = []
+        self.worker = worker
+        self.open()
+        self.read()
+
+    def open(self):
+        try:
+            element = self.worker.driver.find_element(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+        except NoSuchElementException:
+            self.worker.get('/mng/action/home.do')
+
+            # Open Alma configuration
+            self.worker.wait_for_and_click(By.CSS_SELECTOR, '#ALMA_MENU_TOP_NAV_configuration')
+            self.worker.click(By.XPATH, '//*[@href="#CONF_MENU6"]')  # text() = "General"
+            self.worker.click(By.XPATH, '//*[text() = "Customize Letters"]')
+            self.worker.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+
+        return self
+
+    def modified(self, filename):
+        idx = self.filenames.index(filename)
+        return self.update_dates[idx]
+
+    def set_modified(self, filename, date):
+        # Allow updating a single date instead of having to re-read the whole table
+        idx = self.filenames.index(filename)
+        self.update_dates[idx] = date
+
+    def print_letter_status(self, filename, msg, progress=None, newline=False):
+        sys.stdout.write('\r{:100}'.format(''))  # We clear the line first
+        if progress is not None:
+            sys.stdout.write('\r[{}] {:60} {}'.format(
+                progress,
+                filename.split('/')[-1],
+                msg
+            ))
+        else:
+            sys.stdout.write('\r{:60} {}'.format(
+                filename.split('/')[-1],
+                msg
+            ))
+        if newline:
+            sys.stdout.write('\n')
+        sys.stdout.flush()
+
+    def read(self):
+
+        # Identify the indices of the column headers we're interested in
+        column_headers = [el.get_attribute('id') for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > th')]
+        filename_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_cfgFilefilename')
+        update_date_column_idx = column_headers.index('SELENIUM_ID_fileList_HEADER_updateDate')
+
+        # Read the filename column
+        self.filenames = [el.text.replace('../', '') for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > a' % (filename_column_idx + 1))]
+
+        # Read the modification date column
+        self.update_dates = [el.text for el in self.worker.driver.find_elements_by_css_selector('#TABLE_DATA_fileList tr > td:nth-child(%d) > span' % (update_date_column_idx + 1))]
+
+        # return [{x[0]:2 {'modified': x[1], 'index': n}} for n, x in enumerate(zip(filenames, update_dates))]
+
+    def is_customized(self, index):
+        updated_by = self.worker.driver.find_element_by_id('SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
+
+        return updated_by.text not in ('-', 'Network')
+
+    def assert_filename(self, filename):
+        # Assert that we are at the right letter
+        element = self.worker.wait.until(EC.presence_of_element_located((By.ID, 'pageBeanconfigFilefilename')))
+        elt = element.text.replace('../', '')
+        assert elt == filename, "%r != %r" % (elt, filename)
+
+    def open_letter(self, filename):
+        self.open()
+
+        # Open a letter and return its contents as a LetterContent object.
+        index = self.filenames.index(filename)
+        self.worker.wait.until(EC.presence_of_element_located(
+            (By.ID, 'SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename' % index))
+        )
+
+        time.sleep(0.2)
+
+        # Open the "ellipsis" menu.
+        self.worker.scroll_into_view_and_click('#input_fileList_{}'.format(index), By.CSS_SELECTOR)
+        time.sleep(0.2)
+
+        if self.is_customized(index):
+            # Click "Edit" menu item
+            edit_btn_selector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(index)
+            edit_btn = self.worker.driver.find_elements_by_css_selector(edit_btn_selector)
+            self.worker.scroll_into_view_and_click(edit_btn_selector, By.CSS_SELECTOR)
+        else:
+            # Click "Customize" menu item
+            customize_btn_selector = '#ROW_ACTION_fileList_{} a'.format(index)
+            self.worker.scroll_into_view_and_click(customize_btn_selector, By.CSS_SELECTOR)
+
+        # We should now be at the letter edit form. Assert that filename is indeed correct
+        self.assert_filename(filename)
+
+        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        return LetterContent(txtarea.text)
+
+    def open_default_letter(self, filename):
+        """
+        Open a default letter and return its contents as a LetterContent object.
+        """
+        self.open()
+
+        index = self.filenames.index(filename)
+        self.worker.wait.until(EC.presence_of_element_located((By.ID, 'SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename' % index)))
+
+        if self.is_customized(index):
+
+            # Open the "ellipsis" menu
+            self.worker.scroll_into_view_and_click('input_fileList_%d' % index)
+            time.sleep(0.2)
+
+            # Click "View Default" menu item
+            self.worker.scroll_into_view_and_click('ROW_ACTION_fileList_%d_c.ui.table.btn.view_default' % index)
+            time.sleep(0.2)
+
+        else:
+            # Click the filename
+            self.worker.scroll_into_view_and_click('#SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename a' % index, By.CSS_SELECTOR)
+            time.sleep(0.2)
+
+        # Assert that filename is indeed correct
+        self.assert_filename(filename)
+
+        # Read text area content
+        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        return LetterContent(txtarea.text)
+
+    def close_letter(self):
+        # If we are at specific letter, press the "go back" button.
+        elems = self.worker.driver.find_elements_by_css_selector('.pageTitle')
+        if len(elems) != 0:
+            title = elems[0].text.strip()
+            if title == 'Configuration File':
+                try:
+                    backBtn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonback')
+                    backBtn.click()
+                except NoSuchElementException:
+                    pass
+                try:
+                    backBtn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonnavigationcancel')
+                    backBtn.click()
+                except NoSuchElementException:
+                    pass
+
+    def put_contents(self, filename, content):
+        """
+        assuming the letter is already open
+        """
+
+        # Assert that filename is indeed correct
+        self.assert_filename(filename)
+
+        # The "normal" way to set the value of a textarea with Selenium is to use
+        # send_keys(), but it took > 30 seconds for some of the larger letters.
+        # So here's a much faster way:
+        txtarea = self.worker.driver.find_element_by_id('pageBeanfileContent')
+        txtarea_id = txtarea.get_attribute('id')
+        value = content.text.replace('"', '\\"').replace('\n', '\\n')  # Did we forget to escape something? Probably
+        self.worker.driver.execute_script('document.getElementById("' + txtarea_id + '").value = "' + value + '";')
+
+        # Submit the form
+        try:
+            btn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttonsave')
+        except NoSuchElementException:
+            btn = self.worker.driver.find_element_by_id('PAGE_BUTTONS_cbuttoncustomize')
+        btn.click()
+
+        # Wait for the table view.
+        # Longer timeout per https://github.com/scriptotek/alma-slipsomat/issues/33
+        element = self.worker.wait_for(By.CSS_SELECTOR, '.typeD table', timeout=30)
+
+        return True
+
+
+# Commands ---------------------------------------------------------------------------------
+
+def pull_defaults(table, local_storage, status_file):
+
+    count_new = 0
+    count_changed = 0
+    for idx, filename in enumerate(table.filenames):
+        progress = '%d/%d' % ((idx + 1), len(table.filenames))
+        table.print_letter_status(filename, 'checking...', progress)
+        content = table.open_default_letter(filename)
+        table.close_letter()
+
+        old_sha1 = status_file.default_checksum(filename)
+
+        if content.sha1 == old_sha1:
+            table.print_letter_status(filename, 'no changes', progress, True)
+            continue
+
+        # Write contents to default letter
+        local_storage.store_default(filename, content)
+
+        if old_sha1 is None:
+            count_new += 1
+            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+        else:
+            count_changed += 1
+            if old_sha1 == content.sha1:
+                table.print_letter_status(filename, Fore.GREEN + 'no changes' + Style.RESET_ALL, progress, True)
+            else:
+                table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+
+    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed default letters\n'.format(count_new, count_changed) + Style.RESET_ALL)
+
+
+class TestPage(object):
+    """
+    Configuration > Customize letters
+    """
+
+    def __init__(self, worker):
+        self.worker = worker
+
+    def open(self):
+        try:
+            element = self.worker.driver.find_element_by_id('cbuttonupload')
+        except NoSuchElementException:
+            self.worker.get('/mng/action/home.do')
+
+            # Open Alma configuration
+            self.worker.wait_for_and_click(By.CSS_SELECTOR, '#ALMA_MENU_TOP_NAV_configuration')
+            self.worker.click(By.XPATH, '//*[@href="#CONF_MENU6"]')  # text() = "General"
+            self.worker.click(By.XPATH, '//*[text() = "Notification Template"]')
+
+            self.worker.wait_for(By.ID, 'cbuttonupload')
+
+    def test(self, filename, lang):
+
+        self.open()
+        wait = self.worker.waiter()
+
+        if not os.path.isfile(filename):
+            print('%sERROR: File not found: %s%s' % (Fore.RED, filename, Fore.RESET))
+            return
+
+        with open(filename, 'rb') as fp:
+            local_content = LetterContent(fp.read().decode('utf-8'))
+
+        file_root, file_ext = os.path.splitext(filename)
+
+        png_path = '%s_%s.png' % (file_root, lang)
+        html_path = '%s_%s.html' % (file_root, lang)
+
+        tmp = tempfile.NamedTemporaryFile('wb')
+        with open(filename, 'rb') as fp:
+            tmp.write(re.sub('<preferred_language>[a-z]+</preferred_language>',
+                             '<preferred_language>%s</preferred_language>' % lang,
+                             fp.read().decode('utf-8')).encode('utf-8'))
+        tmp.flush()
+
+        # Set language
+        element = self.worker.driver.find_element_by_id('pageBeanuserPreferredLanguage')
+        element.click()
+        element = self.worker.driver.find_element_by_id('pageBeanuserPreferredLanguage_hiddenSelect')
+        select = Select(element)
+        opts = {el.get_attribute('value'): el.get_attribute('innerText') for el in select.options}
+        if lang not in opts:
+            print('%sERROR: Language not found: %s%s' % (Fore.RED, lang, Fore.RESET))
+            return
+
+        longLangName = opts[lang]
+
+        element = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, '//ul[@id="pageBeanuserPreferredLanguage_hiddenSelect_list"]/li[@title="%s"]/a' % longLangName)
+        ))
+        element.click()
+
+        # Upload the XML
+        file_field = self.worker.driver.find_element_by_id('pageBeannewFormFile')
+        file_field.send_keys(tmp.name)
+
+        upload_btn = self.worker.driver.find_element_by_id('cbuttonupload')
+        upload_btn.click()
+
+        self.worker.wait_for(By.CSS_SELECTOR, '.infoErrorMessages')
+
+        run_btn = wait.until(
+            EC.element_to_be_clickable((By.ID, 'PAGE_BUTTONS_admconfigure_notification_templaterun_xsl'))
+        )
+
+        cwh = self.worker.driver.current_window_handle
+
+        run_btn.click()
+        time.sleep(1)
+
+        # Take a screenshot
+        found_win = False
+        for handle in self.worker.driver.window_handles:
+            self.worker.driver.switch_to_window(handle)
+            if 'beanContentParam=htmlContent' in self.worker.driver.current_url:
+                self.worker.driver.set_window_size(self.worker.config.get('screenshot', 'width'), 600)
+                with open(html_path, 'w+b') as html_file:
+                    html_file.write(self.worker.driver.page_source.encode('utf-8'))
+                print('Saved output: %s' % html_path)
+                if self.worker.driver.save_screenshot(png_path):
+                    print('Saved screenshot: %s' % png_path)
+                else:
+                    print('Failed to save screenshot')
+                found_win = True
+                break
+
+        if not found_win:
+            print(Fore.RED + 'ERROR: Failed to produce output!' + Fore.RESET)
+        self.worker.driver.switch_to_window(cwh)
+        tmp.close()
+
+
+def pull(table, local_storage, status_file):
+    """
+    Pull in letters modified directly in Alma, letters whose remote checksum
+    does not match the value in status.json
+
+    Params:
+        table: TemplateConfigurationTable object
+        local_storage: LocalStorage object
+        status_file: StatusFile object
+    """
+    today = datetime.now().strftime('%d/%m/%Y')
+    count_new = 0
+    count_changed = 0
+    for idx, filename in enumerate(table.filenames):
+        progress = '%3d/%3d' % ((idx + 1), len(table.filenames))
+
+        table.print_letter_status(filename, '', progress)
+
+        if table.modified(filename) == status_file.modified(filename) and status_file.modified(filename) != today:
+            # Update date has not changed, so no need to check the actual
+            # contents of the letter.
+            table.print_letter_status(filename, 'no changes', progress, True)
+            continue
+
+        # Update date has changed, or is today (and we don't have time granularity),
+        # so we should check if there are changes.
+
+        table.print_letter_status(filename, 'checking...', progress)
+        content = table.open_letter(filename)
+        table.close_letter()
+
+        old_sha1 = status_file.checksum(filename)
+        if content.sha1 == old_sha1:
+            table.print_letter_status(filename, 'no changes', progress, True)
+            continue
+
+        # Store letter and update status.json
+        if not local_storage.store(filename, content, table.modified(filename)):
+            table.print_letter_status(filename, Fore.RED + 'skipped due to conflict' + Style.RESET_ALL, progress, True)
+            continue
+
+        if old_sha1 is None:
+            count_new += 1
+            table.print_letter_status(filename, Fore.GREEN + 'fetched new letter @ {}'.format(content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+        else:
+            count_changed += 1
+            table.print_letter_status(filename, Fore.GREEN + 'updated from {} to {}'.format(old_sha1[0:7], content.sha1[0:7]) + Style.RESET_ALL, progress, True)
+
+    sys.stdout.write(Fore.GREEN + 'Fetched {} new, {} changed letters\n'.format(count_new, count_changed) + Style.RESET_ALL)
+
+
+def push(table, local_storage, status_file, files=None):
+    """
+    Push local changes to Alma.
+
+    Params:
+        table: TemplateConfigurationTable object
+        local_storage: LocalStorage object
+        status_file: StatusFile object
+        files: list of filenames. If None, all files that have changed will be pushed.
+    """
+
+    files = files or []
+    if len(files) == 0:
+        # If no files were specified, we will look for files that have changes.
+        for filename in table.filenames:
+            if local_storage.is_modified(filename):
+                files.append(filename)
+
+        if len(files) == 0:
+            sys.stdout.write(Fore.GREEN + 'Found no modified files.' + Style.RESET_ALL + '\n')
+            return
+
+        sys.stdout.write(Fore.GREEN + 'Found {} modified file(s):'.format(len(files)) + Style.RESET_ALL + '\n')
+        for filename in files:
+            print(' - {}'.format(filename))
+
+        msg = 'Push the file(s) to Alma? '
+        if input("%s (y/N) " % msg).lower() != 'y':
+            print('Aborting')
+            return
+
+    count_pushed = 0
+    for idx, filename in enumerate(files):
+        progress = '%d/%d' % ((idx + 1), len(files))
+        table.print_letter_status(filename, 'pushing', progress)
+        old_sha1 = status_file.checksum(filename)
+
+        local_content = local_storage.get_content(filename)
+        remote_content = table.open_letter(filename)
+
+        # Read text area content
+        if remote_content.sha1 != old_sha1:
+            msg = 'The remote version has changed. Overwrite remote version?'
+            if not resolve_conflict(filename, local_content, remote_content, msg):
+                table.print_letter_status(filename, 'skipped', progress, True)
+
+                # Go back
+                table.close_letter()
+
+                # Skip to next letter
+                continue
+
+        table.put_contents(filename, local_content)
+        count_pushed += 1
+        msg = 'updated from {} to {}'.format(old_sha1[0:7], local_content.sha1[0:7])
+        table.print_letter_status(filename, msg, progress, True)
+
+        # Update the status file
+        status_file.set_checksum(filename, local_content.sha1)
+        status_file.set_modified(filename)
+
+    sys.stdout.write(Fore.GREEN + 'Pushed {} file(s)\n'.format(count_pushed) + Style.RESET_ALL)
+
+
+def test(testpage, files, languages):
+    """
+    Run a "notification template" test in Alma. An XML file is uploaded and processed
+    Params:
+        worker: worker object
+        files: list of XML files in test-data to use
+        languages: list og languages to test
+    """
+    testpage.open()
+
+    for n, filename in enumerate(files):
+        for m, lang in enumerate(languages):
+            cur = n * len(languages) + m + 1
+            tot = len(languages) * len(files)
+            print('[%d/%d] Testing "%s" using language "%s"' % (cur, tot,
+                                                                os.path.basename(filename),
+                                                                lang))
+
+            testpage.test(filename, lang)

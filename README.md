@@ -1,22 +1,35 @@
 
-This repo contains our `slipsomat` script for pulling and pushing files to Alma
-using Selenium browser automation. The script computes and stores checksums of
-all the letters to protect you from overwriting the work of others.
+`slipsomat` is a small tool for pulling and pushing letters to Alma using
+Selenium browser automation. It allows to you to keep an up-to-date local
+copy of all the letters, so you can keep them under version control. And
+by storing checksums of all the letters, it can warn you if you're about
+to overwrite a letter that has been modified by someone else without pulling
+in their changes.
 
-Using something like Selenium for synchronizing files might seem like a
-rather silly approach. It is! It works… sort-of, but we'd much prefer that
-Ex Libris implemented a proper protocol we could use, so please go and vote for
-[this idea](http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/12471084-synchronizing-xsl-templates-with-external-systems) on Ideas
-Exchange to put some pressure on Ex Libris to do just that.
+This tool exists because Alma doesn't provide a way to synchronize the letters,
+only a web form to edit them. With over 100 different letters, editing them
+using a web form (with no syntax highlighting) is very tedious. We have also
+brought this up on Ideas Exchange – feel free to add your vote to
+[our idea there](http://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/12471084-synchronizing-xsl-templates-with-external-systems).
 
 ## Setup
 
-You will need Python 2.7 or 3.3 or later. Install using `python setup.py install`,
-or `pip install -e . ` if you plan to hack on the script and want an *editable install*.
+Slipsomat works with Python 3.3 and later. We also try to maintain Python 2.7
+support, but don't always test it, so it may accidentally break. The same goes
+for Windows, which we try to support, but don't test regularly, so accidental
+incompatibilities might slip in. Please use our
+[issue tracker](https://github.com/scriptotek/alma-slipsomat/issues) to report
+any problem.
 
-Once installed, you can run `slipsomat` from any directory containing a `slipsomat.cfg`
-file. To get started with your own files, you can create an empty directory with a
-`slipsomat.cfg` with the following contents:
+The package is not yet available on PyPI, so to install it, use git to clone the
+repo or [download](https://github.com/scriptotek/alma-slipsomat/archive/master.zip)
+and extract a zip. Then use `python setup.py install` to install the package, or
+use `pip install -e . ` if you plan to hack on the script and want an
+*editable install*. Once installed, you can run `slipsomat` from any directory
+containing a `slipsomat.cfg` config file.
+
+To get started with your own files, create an empty directory with a `slipsomat.cfg`
+file with the following contents:
 
 ```
 [login]
@@ -142,7 +155,7 @@ Example:
 
     test filename.xml@nn
 
-You can even test multple languages in one go by specifying multiple language
+You can even test multiple languages in one go by specifying multiple language
 codes separated by comma like so:
 
     test filename.xml@en,no,nn
@@ -155,7 +168,7 @@ This can also be used in combination with globbing. To test all XML files in the
 ## See also
 
 * [open issues](https://github.com/scriptotek/alma-slipsomat/issues)
-* [alma-letters-ubo](https://github.com/scriptotek/alma-letters-ubo) for our XSLT files
+* the [alma-letters-ubo repo](https://github.com/scriptotek/alma-letters-ubo) for our XSLT files
 
 
 ## Development
