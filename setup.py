@@ -30,10 +30,16 @@ setup(name='slipsomat',
       author_email='d.m.heggo@ub.uio.no',
       url='https://github.com/scriptotek/alma-slipsomat',
       license='MIT',
-      install_requires=['selenium', 'colorama', 'python-dateutil'],
+      install_requires=[
+          'selenium',
+          'colorama',
+          'python-dateutil'
+      ],
       extras_require={
-        'inquirer': ['inquirer'],
+          'inquirer': ['inquirer'],
       },
-      packages=['slipsomat'],
-      entry_points={'console_scripts': ['slipsomat=slipsomat.shell:main']}
+      entry_points={
+          'console_scripts': ['slipsomat=slipsomat.shell:main']
+      },
+      packages=['slipsomat']
       )

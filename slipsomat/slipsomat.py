@@ -24,8 +24,6 @@ try:
 except NameError:
     pass  # Python 3
 
-from .worker import Worker
-
 
 def normalize_line_endings(text):
     # Normalize line endings to LF and strip ending linebreak.
@@ -90,25 +88,21 @@ class LetterContent(object):
 
 
 class LocalStorage(object):
-    """
-    File storage abstraction class.
-    """
+    """File storage abstraction class."""
 
     def __init__(self, status_file):
         self.status_file = status_file
 
     def is_modified(self, filename):
-        """
-        Returns True if the file has local changes that hasn't been pushed to Alma yet,
-        that is if the checksum of the local file differs from the value in the status file.
-        """
+        """Return True if the letter has local changes not yet pushed to Alma."""
         local_content = self.get_content(filename)
         return local_content.text != '' and local_content.sha1 != self.status_file.checksum(filename)
 
     def get_content(self, filename):
         """
         Read the contents of a letter from disk and return it as a LetterContent object.
-        If no local version exists yet, an empty object is returned.
+
+        If no local version exists yet, an empty LetterContent object is returned.
         """
         if not os.path.isfile(filename):
             return LetterContent('')
@@ -117,8 +111,9 @@ class LocalStorage(object):
 
     def store(self, filename, content, modified):
         """
-        Store the contents of a letter to disk, but only after checking if the local version has
-        changes that will be overwritten.
+        Store the contents of a letter to disk.
+
+        The method first checks if the local version has changes that will be overwritten.
         """
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
@@ -142,9 +137,10 @@ class LocalStorage(object):
 
     def store_default(self, filename, content):
         """
-        Store the contents of a default letter to disk. Since the default letters cannot be
-        uploaded, only downloaded, we do not care to check if the local file has changes
-        that will be overwritten.
+        Store the contents of a default letter to disk.
+
+        Since the default letters cannot be uploaded, only downloaded, we do not care to check
+        if the local file has changes that will be overwritten.
         """
         filename = os.path.join('defaults', filename)
         if not os.path.exists(os.path.dirname(filename)):
@@ -216,9 +212,7 @@ class StatusFile(object):
 
 
 class TemplateConfigurationTable(object):
-    """
-    Configuration > Customize letters
-    """
+    """Interface to "Customize letters" in Alma."""
 
     def __init__(self, worker):
         self.filenames = []
@@ -229,7 +223,7 @@ class TemplateConfigurationTable(object):
 
     def open(self):
         try:
-            element = self.worker.first(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+            self.worker.first(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
@@ -334,9 +328,7 @@ class TemplateConfigurationTable(object):
         return LetterContent(txtarea.text)
 
     def open_default_letter(self, filename):
-        """
-        Open a default letter and return its contents as a LetterContent object.
-        """
+        """Open a default letter and return its contents as a LetterContent object."""
         self.open()
 
         index = self.filenames.index(filename)
@@ -386,10 +378,10 @@ class TemplateConfigurationTable(object):
 
     def put_contents(self, filename, content):
         """
-        assuming the letter is already open
-        """
+        Save letter contents to Alma.
 
-        # Assert that filename is indeed correct
+        This method assumes the letter has already been opened.
+        """
         self.assert_filename(filename)
 
         # The "normal" way to set the value of a textarea with Selenium is to use
@@ -411,7 +403,7 @@ class TemplateConfigurationTable(object):
 
         # Wait for the table view.
         # Longer timeout per https://github.com/scriptotek/alma-slipsomat/issues/33
-        element = self.worker.wait_for(By.CSS_SELECTOR, '.typeD table', timeout=40)
+        self.worker.wait_for(By.CSS_SELECTOR, '.typeD table', timeout=40)
 
         return True
 
@@ -419,7 +411,20 @@ class TemplateConfigurationTable(object):
 # Commands ---------------------------------------------------------------------------------
 
 def pull_defaults(table, local_storage, status_file):
+    """
+    Update the local copies of the default versions of the Alma letters.
 
+    This command downloads the latest version of all the default versions of the Alma letters.
+    If you keep the folder under version control, this allows you to detect changes in the
+    default letters. Unfortunately, there is no way of knowing if a default letter has changed
+    without actually opening it, so we have to open each and every letter. This takes some time
+    of course.
+
+    Params:
+        table: TemplateConfigurationTable object
+        local_storage: LocalStorage object
+        status_file: StatusFile object
+    """
     count_new = 0
     count_changed = 0
     for idx, filename in enumerate(table.filenames):
@@ -455,16 +460,14 @@ def pull_defaults(table, local_storage, status_file):
 
 
 class TestPage(object):
-    """
-    Configuration > Customize letters
-    """
+    """Interface to "Notification Template" in Alma."""
 
     def __init__(self, worker):
         self.worker = worker
 
     def open(self):
         try:
-            element = self.worker.first(By.ID, 'cbuttonupload')
+            self.worker.first(By.ID, 'cbuttonupload')
         except NoSuchElementException:
             self.worker.get('/mng/action/home.do')
 
@@ -483,9 +486,6 @@ class TestPage(object):
         if not os.path.isfile(filename):
             print('%sERROR: File not found: %s%s' % (Fore.RED, filename, Fore.RESET))
             return
-
-        with open(filename, 'rb') as fp:
-            local_content = LetterContent(fp.read().decode('utf-8'))
 
         file_root, file_ext = os.path.splitext(filename)
 
@@ -561,8 +561,9 @@ class TestPage(object):
 
 def pull(table, local_storage, status_file):
     """
-    Pull in letters modified directly in Alma, letters whose remote checksum
-    does not match the value in status.json
+    Update the local files with changes made in Alma.
+
+    This will download letters whose remote checksum does not match the value in status.json.
 
     Params:
         table: TemplateConfigurationTable object
@@ -618,13 +619,14 @@ def push(table, local_storage, status_file, files=None):
     """
     Push local changes to Alma.
 
+    This will upload files that have been modified locally to Alma.
+
     Params:
         table: TemplateConfigurationTable object
         local_storage: LocalStorage object
         status_file: StatusFile object
         files: list of filenames. If None, all files that have changed will be pushed.
     """
-
     files = files or []
     if len(files) == 0:
         # If no files were specified, we will look for files that have changes.
@@ -684,7 +686,8 @@ def push(table, local_storage, status_file, files=None):
 
 def test(testpage, files, languages):
     """
-    Run a "notification template" test in Alma. An XML file is uploaded and processed
+    Test the output of an XML file by running a "notification template" test in Alma.
+
     Params:
         worker: worker object
         files: list of XML files in test-data to use

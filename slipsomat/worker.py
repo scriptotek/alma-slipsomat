@@ -20,14 +20,12 @@ except Exception:
 
 
 class Worker(object):
-    """
-    This class is mostly about providing helper methods to work
-    efficiently with Selenium.
-    """
+    """This class is mostly about providing helper methods to work efficiently with Selenium."""
 
     def __init__(self, cfg_file):
         """
-        Construct a new Worker object
+        Construct a new Worker object.
+
         Params:
             cfg_file: Name of config file
         """
