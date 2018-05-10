@@ -412,7 +412,7 @@ class TemplateConfigurationTable(object):
 
         # Wait for the table view.
         # Longer timeout per https://github.com/scriptotek/alma-slipsomat/issues/33
-        element = self.worker.wait_for(By.CSS_SELECTOR, '.typeD table', timeout=30)
+        element = self.worker.wait_for(By.CSS_SELECTOR, '.typeD table', timeout=40)
 
         return True
 

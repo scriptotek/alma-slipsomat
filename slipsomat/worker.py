@@ -25,7 +25,7 @@ class Worker(object):
     efficiently with Selenium.
     """
 
-    def __init__(self, cfg_file, default_timeout=20):
+    def __init__(self, cfg_file):
         """
         Construct a new Worker object
         Params:
@@ -33,8 +33,8 @@ class Worker(object):
         """
         self.driver = None
         self.config = self.read_config(cfg_file)
+        self.default_timeout = int(self.config.get('selenium', 'default_timeout'))
         self.instance = self.config.get('login', 'instance')
-        self.default_timeout = default_timeout
 
     def waiter(self, timeout=None):
         if timeout is None:
@@ -94,6 +94,7 @@ class Worker(object):
 
             [selenium]
             browser=firefox
+            default_timeout=20
 
             [window]
             width=1200

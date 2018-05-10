@@ -42,6 +42,7 @@ password=
 
 [selenium]
 browser=firefox
+default_timeout=20
 
 [window]
 width=1200
