@@ -21,15 +21,14 @@ incompatibilities might slip in. Please use our
 [issue tracker](https://github.com/scriptotek/alma-slipsomat/issues) to report
 any problem.
 
-The package is not yet available on PyPI, so to install it, use git to clone the
-repo or [download](https://github.com/scriptotek/alma-slipsomat/archive/master.zip)
-and extract a zip. Then use `python setup.py install` to install the package, or
-use `pip install -e . ` if you plan to hack on the script and want an
-*editable install*. Once installed, you can run `slipsomat` from any directory
-containing a `slipsomat.cfg` config file.
+Install with pip:
 
-To get started with your own files, create an empty directory with a `slipsomat.cfg`
-file with the following contents:
+    pip install -U slipsomat
+
+Once installed, you can run `slipsomat` from any directory containing a
+`slipsomat.cfg` config file.
+To get started, create an empty directory with a `slipsomat.cfg` file with the
+following contents:
 
 ```
 [login]
@@ -174,32 +173,43 @@ This can also be used in combination with globbing. To test all XML files in the
 
 ## Development
 
+### Editable install
+
+If you want an *editable install* that you can hack on yourself:
+
+    git clone https://github.com/scriptotek/alma-slipsomat.git
+    cd alma-slipsomat
+    pip install -U -e .
+
+
+### Using slipsomat as a Python library
+
 Given that you have created a `slipsomat.cfg` file, here's how to start
 experimenting:
 
 ```python
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from slipsomat.slipsomat import Browser, TemplateTable
+from slipsomat.worker import Worker
+from slipsomat.slipsomat import TemplateConfigurationTable
 
-# We set a quite short timeout (3 seconds) since we don't want to wait
-# a long time every time we write a wrong selector.
-browser = Browser('slipsomat.cfg', default_timeout=3)
+worker = Worker('slipsomat.cfg')
 
-# Open Browser and login using credentials from slipsomat.cfg
-browser.connect()
+# Start the browser and log in using the credentials from slipsomat.cfg
+worker.connect()
 
-table = TemplateTable(browser)
-letter = table.rows[0]
-letter.view_default()
+# Open and parse the letters table
+table = TemplateConfigurationTable(worker)
 
-wait = browser.waiter()
-# Try looking for some element and click it
+# Open the default version of the SmsFulCancelRequestLetter letter
+table.open_default_letter('xsl/letters/sms/SmsFulCancelRequestLetter.xsl')
+
+# Use Selenium to click some element
+wait = worker.waiter()
 element = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@aria-label="Open Alma configuration"]')))
 element.click()
-
-
 ```
 
+Note: During development, it might be a good idea to set `default_timeout` in
+`slipsomat.cfg` to a small value (like 3 seconds) to avoid having to wait a
+long time every time you write a wrong selector.
