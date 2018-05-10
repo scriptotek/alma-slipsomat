@@ -344,7 +344,7 @@ class TemplateTable(object):
         if len(elems) != 0:
             # Open Alma configuration
             self.browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-            self.browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
+            self.browser.click(By.XPATH, '//*[@href="#CONF_MENU6"]')
             self.browser.click(By.XPATH, '//*[text() = "Customize Letters"]')
 
         self.browser.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
@@ -858,7 +858,7 @@ def test_XML(browser, filename, languages='en'):
                 # Open Alma configuration
                 browser.wait_for(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
                 browser.click(By.XPATH, '//*[@aria-label="Open Alma configuration"]')
-                browser.click(By.XPATH, '//*[@href="#CONF_MENU5"]')
+                browser.click(By.XPATH, '//*[@href="#CONF_MENU6"]')
                 browser.click(By.XPATH, '//*[text() = "Notification Template"]')
 
                 browser.wait_for(By.ID, 'cbuttonupload')
