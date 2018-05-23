@@ -9,7 +9,8 @@ from cmd import Cmd
 import traceback
 
 from . import __version__
-from .slipsomat import Worker, StatusFile, LocalStorage, TemplateConfigurationTable, TestPage
+from .worker import Worker
+from .slipsomat import StatusFile, LocalStorage, TemplateConfigurationTable, TestPage
 from .slipsomat import pull, pull_defaults, push, test
 
 try:
