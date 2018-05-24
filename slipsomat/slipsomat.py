@@ -52,17 +52,17 @@ def resolve_conflict(filename, local_content, remote_content, msg):
     while True:
         response = input(Fore.CYAN + "%s [y: yes, n: no, d: diff] " % msg + Style.RESET_ALL).lower()[:1]
         if response == 'd':
-            show_diff(local_content, remote_content)
+            show_diff(remote_content, local_content)
         else:
             return response == 'y'
 
 
-def show_diff(src, dst):
+def show_diff(dst, src):
     src = src.text.strip().splitlines()
     dst = dst.text.strip().splitlines()
 
     print()
-    for line in color_diff(difflib.unified_diff(src, dst, fromfile='Local', tofile='Alma')):
+    for line in color_diff(difflib.unified_diff(dst, src, fromfile='Alma', tofile='Local')):
         print(line)
 
 
