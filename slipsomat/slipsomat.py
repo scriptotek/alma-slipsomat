@@ -79,6 +79,8 @@ class LetterContent(object):
         return m.hexdigest()
 
     def validate(self):
+        if self.text == '':
+            return
         try:
             ElementTree.fromstring(self.text)
         except ElementTree.ParseError as e:
