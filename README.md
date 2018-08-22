@@ -47,7 +47,7 @@ browser=firefox
 default_timeout=20
 
 [window]
-width=1200
+width=1300
 height=700
 ```
 

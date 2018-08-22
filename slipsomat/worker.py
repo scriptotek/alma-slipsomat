@@ -98,8 +98,8 @@ class Worker(object):
             default_timeout=20
 
             [window]
-            width=1200
-            height=700
+            width=1300
+            height=800
 
             [screenshot]
             width=1000
