@@ -12,6 +12,7 @@ import difflib
 import tempfile
 
 from datetime import datetime
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -432,7 +433,12 @@ def pull_defaults(table, local_storage, status_file):
     for idx, filename in enumerate(table.filenames):
         progress = '%d/%d' % ((idx + 1), len(table.filenames))
         table.print_letter_status(filename, 'checking...', progress)
-        content = table.open_default_letter(filename)
+        try:
+            content = table.open_default_letter(filename)
+        except TimeoutException:
+            # Retry once
+            table.print_letter_status(filename, 'retrying...', progress)
+            content = table.open_default_letter(filename)
         table.close_letter()
 
         old_sha1 = status_file.default_checksum(filename)
@@ -590,7 +596,13 @@ def pull(table, local_storage, status_file):
         # so we should check if there are changes.
 
         table.print_letter_status(filename, 'checking...', progress)
-        content = table.open_letter(filename)
+        try:
+            content = table.open_letter(filename)
+        except TimeoutException:
+            # Retry once
+            table.print_letter_status(filename, 'retrying...', progress)
+            content = table.open_letter(filename)
+
         table.close_letter()
 
         old_sha1 = status_file.checksum(filename)
