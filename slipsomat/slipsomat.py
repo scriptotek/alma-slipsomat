@@ -144,7 +144,7 @@ class LocalStorage(object):
         Since the default letters cannot be uploaded, only downloaded, we do not care to check
         if the local file has changes that will be overwritten.
         """
-        defaults_filename = os.path.join('defaults', defaults_filename)
+        defaults_filename = os.path.join('defaults', filename)
         if not os.path.exists(os.path.dirname(defaults_filename)):
             os.makedirs(os.path.dirname(defaults_filename))
         with open(defaults_filename, 'wb') as f:
