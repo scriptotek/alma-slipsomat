@@ -7,16 +7,12 @@ from textwrap import dedent
 from glob import glob
 from cmd import Cmd
 import traceback
+from PyInquirer import prompt
 
 from . import __version__
 from .worker import Worker
 from .slipsomat import StatusFile, LocalStorage, TemplateConfigurationTable, TestPage
 from .slipsomat import pull, pull_defaults, push, test
-
-try:
-    import inquirer
-except ImportError:
-    inquirer = None
 
 histfile = '.slipsomat_history'
 try:
@@ -147,27 +143,28 @@ class Shell(Cmd):
         print("\nException:", e)
         traceback.print_exc(file=sys.stdout)
 
-        if inquirer is None or not hasattr(inquirer, 'List'):
-            print('Please "pip install inquirer" if you would like more debug options')
-        else:
-            q = inquirer.List('goto',
-                              message='Now what?',
-                              choices=['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
-                              )
-            answers = inquirer.prompt([q])
-            if answers['goto'] == 'Debug with ipdb':
-                try:
-                    import ipdb
-                except ImportError:
-                    print('Please run "pip install ipdb" to install ipdb')
-                    sys.exit(1)
-                ipdb.post_mortem()
-            elif answers['goto'] == 'Debug with pdb':
-                import pdb
-                pdb.post_mortem()
-            elif answers['goto'] == 'Restart browser':
-                self.worker.restart()
-                return
+        questions = [
+            {
+                'type': 'list',
+                'name': 'action',
+                'message': 'Now what?',
+                'choices': ['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
+            }
+        ]
+        answers = prompt(questions)
+        if answers['action'] == 'Debug with ipdb':
+            try:
+                import ipdb
+            except ImportError:
+                print('Please run "pip install ipdb" to install ipdb')
+                sys.exit(1)
+            ipdb.post_mortem()
+        elif answers['action'] == 'Debug with pdb':
+            import pdb
+            pdb.post_mortem()
+        elif answers['action'] == 'Restart browser':
+            self.worker.restart()
+            return
 
         self.worker.close()
         sys.exit()

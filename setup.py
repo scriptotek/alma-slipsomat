@@ -37,11 +37,9 @@ setup(name='slipsomat',
       install_requires=[
           'selenium',
           'colorama',
-          'python-dateutil'
+          'python-dateutil',
+          'PyInquirer',
       ],
-      extras_require={
-          'inquirer': ['inquirer'],
-      },
       entry_points={
           'console_scripts': ['slipsomat=slipsomat.shell:main']
       },
