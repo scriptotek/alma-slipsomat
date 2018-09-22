@@ -17,7 +17,7 @@ with open(path.join(here, 'README.md')) as fp:
     long_description = fp.read()
 
 setup(name='slipsomat',
-      version='0.2.5',  # Use bumpversion to update
+      version='0.2.6',  # Use bumpversion to update
       description='Sync Alma slips & letters',
       long_description=long_description,
       long_description_content_type='text/markdown',
