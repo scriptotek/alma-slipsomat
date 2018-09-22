@@ -56,12 +56,15 @@ class Shell(Cmd):
         sys.stdout.write('\rReading table... DONE\n')
 
     @staticmethod
-    def completion_helper(basedir, word):
+    def completion_helper(basedir, word, file_ext=None):
         candidates = []
         for root, dirs, files in os.walk(basedir):
             for file in files:
                 candidates.append(os.path.join(root[len(basedir):], file))
-        return [c for c in candidates if c.lower().startswith(word.lower())]
+        candidates = [c for c in candidates if c.lower().startswith(word.lower())]
+        if file_ext is not None:
+            candidates = [c for c in candidates if os.path.splitext(c)[1] == file_ext]
+        return candidates
 
     def emptyline(self):
         """Handle empty lines."""
@@ -99,7 +102,7 @@ class Shell(Cmd):
 
     def complete_push(self, word, line, begin_idx, end_idx):
         """Complete push arguments."""
-        return self.completion_helper('xsl/letters/', word)
+        return self.completion_helper('xsl/letters/', word, '.xsl')
 
     def help_test(self):
         print(dedent("""
@@ -133,7 +136,7 @@ class Shell(Cmd):
 
     def complete_test(self, word, line, begin_idx, end_idx):
         """Complete test arguments."""
-        return self.completion_helper('test-data/', word)
+        return self.completion_helper('test-data/', word, '.xml')
 
     # Aliases
     do_EOF = do_exit  # ctrl-d
