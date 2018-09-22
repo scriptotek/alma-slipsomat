@@ -124,11 +124,7 @@ class Worker(object):
         if browser_name == 'firefox':
             from selenium.webdriver import Firefox
 
-            browser_binary = FirefoxBinary()
-
-            driver = Firefox(firefox_binary=browser_binary)
-            driver._is_remote = False  # Workaround for http://stackoverflow.com/a/42770761/489916
-            return driver
+            return Firefox()
 
         if browser_name == 'chrome':
             from selenium.webdriver import Chrome
