@@ -550,24 +550,23 @@ class TestPage(object):
         time.sleep(1)
 
         # Take a screenshot
-        found_win = False
-        for handle in self.worker.driver.window_handles:
-            self.worker.driver.switch_to_window(handle)
-            if 'beanContentParam=htmlContent' in self.worker.driver.current_url:
-                self.worker.driver.set_window_size(
-                    self.worker.config.get('screenshot', 'width'), 600)
-                with open(html_path, 'w+b') as html_file:
-                    html_file.write(self.worker.driver.page_source.encode('utf-8'))
-                print('Saved output: %s' % html_path)
-                if self.worker.driver.save_screenshot(png_path):
-                    print('Saved screenshot: %s' % png_path)
-                else:
-                    print('Failed to save screenshot')
-                found_win = True
-                break
+        self.worker.driver.switch_to_window(self.worker.driver.window_handles[-1])
 
-        if not found_win:
-            print(Fore.RED + 'ERROR: Failed to produce output!' + Fore.RESET)
+            # if 2 == 1 and 'beanContentParam=htmlContent' in self.worker.driver.current_url:
+        self.worker.driver.set_window_size(
+            self.worker.config.get('screenshot', 'width'),
+            600
+        )
+        with open(html_path, 'w+b') as html_file:
+            html_file.write(self.worker.driver.page_source.encode('utf-8'))
+        print('Saved output: %s' % html_path)
+        if self.worker.driver.save_screenshot(png_path):
+            print('Saved screenshot: %s' % png_path)
+        else:
+            print('Failed to save screenshot')
+
+        # if not found_win:
+        #     print(Fore.RED + 'ERROR: Failed to produce output!' + Fore.RESET)
         self.worker.driver.switch_to_window(cwh)
         tmp.close()
 
