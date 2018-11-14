@@ -660,7 +660,7 @@ def push(table, local_storage, status_file, files=None):
         sys.stdout.write(
             Fore.GREEN + 'Found {} modified file(s):'.format(len(files)) + Style.RESET_ALL + '\n')
         for filename in files:
-            print(' - {}'.format(filename))
+            print(' - {}'.format(filename.replace('xsl/letters/', '')))
 
         msg = 'Push the file(s) to Alma? '
         if input("%s (y/N) " % msg).lower() != 'y':
