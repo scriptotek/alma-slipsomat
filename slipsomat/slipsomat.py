@@ -670,6 +670,10 @@ def push(table, local_storage, status_file, files=None):
     count_pushed = 0
     for idx, filename in enumerate(files):
         progress = '%d/%d' % ((idx + 1), len(files))
+        if filename not in table.filenames:
+            table.print_letter_status(filename, Fore.RED + 'File not found' + Style.RESET_ALL, progress, True)
+            continue
+
         table.print_letter_status(filename, 'pushing', progress)
         old_sha1 = status_file.checksum(filename)
 
