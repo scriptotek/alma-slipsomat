@@ -228,8 +228,9 @@ class TemplateConfigurationTable(object):
         try:
             self.worker.first(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
         except NoSuchElementException:
-            self.worker.get('/mng/action/home.do')
+            self.print_letter_status('Opening table...', '')
 
+            self.worker.get('/mng/action/home.do?mode=ajax')
             # Open Alma configuration
             self.worker.wait_for_and_click(
                 By.CSS_SELECTOR, '#ALMA_MENU_TOP_NAV_configuration')
@@ -379,6 +380,8 @@ class TemplateConfigurationTable(object):
                 except NoSuchElementException:
                     pass
 
+            self.worker.wait_for(By.CSS_SELECTOR, '#TABLE_DATA_fileList')
+
     def put_contents(self, filename, content):
         """
         Save letter contents to Alma.
@@ -439,6 +442,8 @@ def pull_defaults(table, local_storage, status_file):
             # Retry once
             table.print_letter_status(filename, 'retrying...', progress)
             content = table.open_default_letter(filename)
+
+        table.print_letter_status(filename, 'closing...', progress)
         table.close_letter()
 
         old_sha1 = status_file.default_checksum(filename)
