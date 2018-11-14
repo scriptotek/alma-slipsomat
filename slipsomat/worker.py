@@ -5,7 +5,6 @@ from io import StringIO
 import getpass
 import sys
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.remote.errorhandler import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait

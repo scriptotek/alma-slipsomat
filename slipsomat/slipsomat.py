@@ -46,8 +46,9 @@ def color_diff(diff):
 
 def resolve_conflict(filename, local_content, remote_content, msg):
     print()
-    print('\n' + Back.RED + Fore.WHITE +
-          '\n\n  Conflict: ' + msg + '\n' + Style.RESET_ALL)
+    print(
+        '\n' + Back.RED + Fore.WHITE + '\n\n  Conflict: ' + msg + '\n' + Style.RESET_ALL
+    )
 
     msg = 'Continue with {}?'.format(filename)
     while True:
@@ -551,8 +552,7 @@ class TestPage(object):
 
         # Take a screenshot
         self.worker.driver.switch_to_window(self.worker.driver.window_handles[-1])
-
-            # if 2 == 1 and 'beanContentParam=htmlContent' in self.worker.driver.current_url:
+        # GitHub: #30  -> if 'beanContentParam=htmlContent' in self.worker.driver.current_url:
         self.worker.driver.set_window_size(
             self.worker.config.get('screenshot', 'width'),
             600
