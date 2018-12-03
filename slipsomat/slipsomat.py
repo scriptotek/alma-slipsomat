@@ -552,6 +552,11 @@ class TestPage(object):
 
         # Take a screenshot
         self.worker.driver.switch_to_window(self.worker.driver.window_handles[-1])
+
+        if self.worker.driver.page_source.startswith('<xsl'):
+            # Wrong window, try next one
+            self.worker.driver.switch_to_window(self.worker.driver.window_handles[-2])
+
         # GitHub: #30  -> if 'beanContentParam=htmlContent' in self.worker.driver.current_url:
         self.worker.driver.set_window_size(
             self.worker.config.get('screenshot', 'width'),
