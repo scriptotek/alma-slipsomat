@@ -91,6 +91,7 @@ class Worker(object):
         config = ConfigParser()
         defaults = StringIO(dedent(
             u"""[login]
+            domain=
 
             [selenium]
             browser=firefox
