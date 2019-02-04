@@ -288,7 +288,8 @@ class TemplateConfigurationTable(object):
 
         # return [{x[0]:2 {'modified': x[1], 'index': n}} for n, x in enumerate(zip(filenames, update_dates))]
 
-    def is_customized(self, index):
+    def is_customized(self, filename):
+        index = self.filenames.index(filename)
         updated_by = self.worker.first(By.ID, 'SPAN_SELENIUM_ID_fileList_ROW_%d_COL_cfgFileupdatedBy' % index)
 
         return updated_by.text not in ('-', 'Network')
@@ -317,7 +318,7 @@ class TemplateConfigurationTable(object):
             '#input_fileList_{}'.format(index), By.CSS_SELECTOR)
         time.sleep(0.2)
 
-        if self.is_customized(index):
+        if self.is_customized(filename):
             # Click "Edit" menu item
             edit_btn_selector = '#ROW_ACTION_fileList_{}_c\\.ui\\.table\\.btn\\.edit a'.format(index)
             self.worker.scroll_into_view_and_click(edit_btn_selector, By.CSS_SELECTOR)
@@ -340,7 +341,7 @@ class TemplateConfigurationTable(object):
         self.worker.wait.until(EC.presence_of_element_located(
             (By.ID, 'SELENIUM_ID_fileList_ROW_%d_COL_cfgFilefilename' % index)))
 
-        if self.is_customized(index):
+        if self.is_customized(filename):
 
             # Open the "ellipsis" menu
             self.worker.scroll_into_view_and_click('input_fileList_%d' % index)
@@ -606,11 +607,17 @@ def pull(table, local_storage, status_file):
 
         table.print_letter_status(filename, 'checking...', progress)
         try:
-            content = table.open_letter(filename)
+            if table.is_customized(filename):
+                content = table.open_letter(filename)
+            else:
+                content = table.open_default_letter(filename)
         except TimeoutException:
             # Retry once
             table.print_letter_status(filename, 'retrying...', progress)
-            content = table.open_letter(filename)
+            if table.is_customized(filename):
+                content = table.open_letter(filename)
+            else:
+                content = table.open_default_letter(filename)
 
         table.close_letter()
 
