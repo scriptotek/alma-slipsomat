@@ -1,6 +1,6 @@
-![PyPI](https://img.shields.io/pypi/v/slipsomat.svg)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slipsomat.svg)
-![PyPI - License](https://img.shields.io/pypi/l/slipsomat.svg)
+[![PyPI](https://img.shields.io/pypi/v/slipsomat.svg)](https://pypi.org/project/slipsomat/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slipsomat.svg)](https://pypi.org/project/slipsomat/)
+[![PyPI - License](https://img.shields.io/pypi/l/slipsomat.svg)](https://github.com/scriptotek/alma-slipsomat/blob/master/LICENSE)
 
 `slipsomat` is a small tool for pulling and pushing letters to Alma using
 Selenium browser automation. It allows to you to keep an up-to-date local
