@@ -1,6 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/slipsomat.svg)](https://pypi.org/project/slipsomat/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slipsomat.svg)](https://pypi.org/project/slipsomat/)
 [![PyPI - License](https://img.shields.io/pypi/l/slipsomat.svg)](https://github.com/scriptotek/alma-slipsomat/blob/master/LICENSE)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fscriptotek%2Falma-slipsomat.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fscriptotek%2Falma-slipsomat?ref=badge_shield)
 
 `slipsomat` is a small tool for pulling and pushing letters to Alma using
 Selenium browser automation. It allows to you to keep an up-to-date local
@@ -214,3 +215,7 @@ element.click()
 Note: During development, it might be a good idea to set `default_timeout` in
 `slipsomat.cfg` to a small value (like 3 seconds) to avoid having to wait a
 long time every time you write a wrong selector.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fscriptotek%2Falma-slipsomat.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fscriptotek%2Falma-slipsomat?ref=badge_large)
