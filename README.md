@@ -17,12 +17,10 @@ brought this up on Ideas Exchange – feel free to add your vote to
 
 ## Setup
 
-Slipsomat works with Python 3.3 and later. We also try to maintain Python 2.7
-support, but don't always test it, so it may accidentally break. The same goes
-for Windows, which we try to support, but don't test regularly, so accidental
-incompatibilities might slip in. Please use our
-[issue tracker](https://github.com/scriptotek/alma-slipsomat/issues) to report
-any problem.
+Slipsomat should work with Python 3.5 and later on most platforms.
+Please use our
+[issue tracker](https://github.com/scriptotek/alma-slipsomat/issues)
+to report any problems.
 
 Install with pip:
 

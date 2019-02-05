@@ -70,8 +70,9 @@ def show_diff(dst, src):
 
 class LetterContent(object):
 
-    def __init__(self, text):
+    def __init__(self, text, filename=None):
         self.text = text.replace('\r\n', '\n').replace('\r', '\n').strip()
+        self.filename = filename
         self.validate()
 
     @property
@@ -86,7 +87,7 @@ class LetterContent(object):
         try:
             ElementTree.fromstring(self.text)
         except ElementTree.ParseError as e:
-            print('%sError: The file contains invalid XML:%s' % (Fore.RED, Style.RESET_ALL))
+            print('%sError: %s contains invalid XML:%s' % (Fore.RED, self.filename or 'The letter', Style.RESET_ALL))
             print(Fore.RED + str(e) + Style.RESET_ALL)
             return
 
@@ -109,9 +110,9 @@ class LocalStorage(object):
         If no local version exists yet, an empty LetterContent object is returned.
         """
         if not os.path.isfile(filename):
-            return LetterContent('')
+            return LetterContent('', filename=filename)
         with open(filename, 'rb') as fp:
-            return LetterContent(fp.read().decode('utf-8'))
+            return LetterContent(fp.read().decode('utf-8'), filename=filename)
 
     def store(self, filename, content, modified):
         """

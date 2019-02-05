@@ -7,7 +7,7 @@ from textwrap import dedent
 from glob import glob
 from cmd import Cmd
 import traceback
-from PyInquirer import prompt
+import questionary
 
 from . import __version__
 from .worker import Worker
@@ -143,26 +143,27 @@ class Shell(Cmd):
         print("\nException:", e)
         traceback.print_exc(file=sys.stdout)
 
-        questions = [
-            {
-                'type': 'list',
-                'name': 'action',
-                'message': 'Now what?',
-                'choices': ['Restart browser', 'Debug with ipdb', 'Debug with pdb', 'Exit'],
-            }
-        ]
-        answers = prompt(questions)
-        if answers['action'] == 'Debug with ipdb':
+        answer = questionary.select(
+            'Now what?',
+            choices=[
+                'Restart browser',
+                'Debug with ipdb',
+                'Debug with pdb',
+                'Exit',
+            ]
+        ).ask()
+
+        if answer == 'Debug with ipdb':
             try:
                 import ipdb
             except ImportError:
                 print('Please run "pip install ipdb" to install ipdb')
                 sys.exit(1)
             ipdb.post_mortem()
-        elif answers['action'] == 'Debug with pdb':
+        elif answer == 'Debug with pdb':
             import pdb
             pdb.post_mortem()
-        elif answers['action'] == 'Restart browser':
+        elif answer == 'Restart browser':
             self.worker.restart()
             return
 
