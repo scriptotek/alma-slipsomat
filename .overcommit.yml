@@ -16,7 +16,7 @@
 # Uncomment the following lines to make the configuration take effect.
 
 PreCommit:
-  Pyflake8:
+  PythonFlake8:
     enabled: true
     on_warn: fail
   TrailingWhitespace:
