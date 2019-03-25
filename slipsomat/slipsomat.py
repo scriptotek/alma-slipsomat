@@ -328,16 +328,14 @@ class TemplateConfigurationTable(object):
             customize_btn_selector = '#ROW_ACTION_fileList_{} a'.format(index)
             self.worker.scroll_into_view_and_click(customize_btn_selector, By.CSS_SELECTOR)
 
-            try:
-                self.assert_filename(filename)
-            except NoSuchElementException:
+            element = self.worker.wait_for(By.CSS_SELECTOR, '#PAGE_BUTTONS_cbuttonconfirmationconfirm, #pageBeanfileContent')
+            if element.get_attribute("id") == 'PAGE_BUTTONS_cbuttonconfirmationconfirm':
                 # If this is the first time the letter is edited, and it's managed in network zone,
                 # we will get a modal dialog asking us to confirm if we want to edit it.
                 #
                 # > This row is managed in the Network. If customized, no future updates will be
                 # > retrieved from the Network for this row. Are you sure you want to proceed?
                 #
-                element = self.driver.find_element(By.ID, 'PAGE_BUTTONS_cbuttonconfirmationconfirm')
                 element.click()
 
         # We should now be at the letter edit form. Assert that filename is indeed correct
