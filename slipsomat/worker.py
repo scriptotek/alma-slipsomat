@@ -45,9 +45,8 @@ class Worker(object):
         return self.driver.find_elements(by, by_value)
 
     def wait_for(self, by, by_value, timeout=None):
-        if timeout is not None:
-            return self.waiter(timeout).until(EC.visibility_of_element_located((by, by_value)))
-        return self.wait.until(EC.visibility_of_element_located((by, by_value)))
+        wait = self.wait if timeout is None else self.waiter(timeout)
+        return wait.until(EC.visibility_of_element_located((by, by_value)))
 
     def wait_for_and_click(self, by, by_value, timeout=None):
         elem = self.wait_for(by, by_value, timeout)
