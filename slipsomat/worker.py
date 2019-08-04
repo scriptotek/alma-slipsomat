@@ -182,6 +182,7 @@ class Worker(object):
             sys.stdout.write('Logging in as {}...'.format(username))
             self.get('/mng/login?institute={}&auth={}'.format(institution, auth_type))
 
+        element = self.wait.until(EC.visibility_of_element_located((By.ID, 'username')))
         self.send_keys(By.ID, 'username', username)
         element = self.send_keys(By.ID, 'password', password)
         element.send_keys(Keys.RETURN)
