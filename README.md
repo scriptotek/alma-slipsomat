@@ -1,3 +1,11 @@
+# ⚠️ alma-slipsomat is not maiontained
+
+This repository has been archived on Oct 14, 2022. Unfortunately we did not have the time and resources to update the tool after a breaking change in Alma in 2019 (https://github.com/scriptotek/alma-slipsomat/issues/40).
+
+We're not aware of any good alternatives at the moment, but if https://ideas.exlibrisgroup.com/forums/308173-alma/suggestions/12471084-synchronizing-xsl-templates-with-external-systems is implemented, it should be much easier to create a synchronization tool in the future.
+
+# Slipsomat
+
 [![PyPI](https://img.shields.io/pypi/v/slipsomat.svg)](https://pypi.org/project/slipsomat/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/slipsomat.svg)](https://pypi.org/project/slipsomat/)
 [![PyPI - License](https://img.shields.io/pypi/l/slipsomat.svg)](https://github.com/scriptotek/alma-slipsomat/blob/master/LICENSE)
