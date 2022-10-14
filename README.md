@@ -1,4 +1,4 @@
-# ⚠️ Slipsomat is archived
+# ⚠️ Archived
 
 This repository has been archived on Oct 14, 2022. Unfortunately we did not have the time and resources to update the tool after a breaking change in Alma in 2019 (https://github.com/scriptotek/alma-slipsomat/issues/40).
 
